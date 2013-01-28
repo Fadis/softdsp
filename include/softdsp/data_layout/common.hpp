@@ -8,6 +8,8 @@
 #include <memory>
 #include <vector>
 
+#include <softdsp/type_generator.hpp>
+
 namespace softdsp {
   namespace data_layout {
     struct common {

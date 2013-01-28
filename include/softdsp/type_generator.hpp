@@ -43,8 +43,8 @@
 #include <softdsp/static_range_size.hpp>
 #include <softdsp/primitive.hpp>
 #include <softdsp/tag.hpp>
+#include <softdsp/remove_proxy.hpp>
 
-#include <cxxabi.h>
 namespace softdsp {
   namespace data_layout {
     template< typename T >
@@ -63,7 +63,21 @@ namespace softdsp {
       typename boost::enable_if<
         boost::mpl::and_<
           boost::mpl::not_< boost::is_same< boost::remove_cv< T >, bool > >,
-          boost::is_integral< T >
+          boost::is_integral< T >,
+          boost::is_signed< T >
+        >
+      >::type* = 0
+    ) const {
+      return llvm::IntegerType::get( *context, sizeof( T ) * 8 );
+    }
+    template< typename T >
+    llvm::IntegerType *operator()(
+      tag< T >,
+      typename boost::enable_if<
+        boost::mpl::and_<
+          boost::mpl::not_< boost::is_same< boost::remove_cv< T >, bool > >,
+          boost::is_integral< T >,
+          boost::mpl::not_< boost::is_signed< T > >
         >
       >::type* = 0
     ) const {
@@ -104,7 +118,7 @@ namespace softdsp {
         boost::mpl::and_<
           hermit::is_forward_traversal_range< Range >,
           softdsp::is_static_range< Range >,
-          is_primitive< typename softdsp::static_range_size< Range >::type >
+          is_primitive< typename remove_proxy< typename hermit::range_value< Range >::type >::type >
         >
       >::type* = 0
     ) const {
@@ -122,7 +136,7 @@ namespace softdsp {
         boost::mpl::and_<
           hermit::is_forward_traversal_range< Range >,
           softdsp::is_static_range< Range >,
-          boost::mpl::not_< is_primitive< typename softdsp::static_range_size< Range >::type > >
+          boost::mpl::not_< is_primitive< typename remove_proxy< typename hermit::range_value< Range >::type >::type > >
         >
       >::type* = 0
     ) const {
@@ -147,7 +161,6 @@ namespace softdsp {
         boost::is_same< begin, end >
       >::type* = 0
     ) const {
-      std::cout << typeid( typename begin::type ).name() << std::endl;
       dest.push_back( (*this)( tag< typename begin::type >() ) );
       transform_struct< typename boost::mpl::next< begin >::type, end >( dest );
     }

@@ -1,3 +1,4 @@
+#include <mcheck.h>
 #include <softdsp/primitive.hpp>
 #include <softdsp/constant_generator.hpp>
 #include <softdsp/tag.hpp>
@@ -10,6 +11,9 @@
 #include <softdsp/data_layout/get_element_type.hpp>
 #include <softdsp/data_layout/array.hpp>
 #include <softdsp/data_layout/tuple.hpp>
+#include <softdsp/placeholders.hpp>
+#include <softdsp/llvm_toolbox.hpp>
+#include <softdsp/context.hpp>
 
 #include <llvm/ADT/ArrayRef.h>
 #include <llvm/LLVMContext.h>
@@ -22,6 +26,18 @@
 #include <llvm/Target/TargetOptions.h>
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/Support/TargetRegistry.h>
+#include <llvm/Support/raw_ostream.h>
+#include <llvm/DerivedTypes.h>
+#include <llvm/Transforms/Utils/Cloning.h>
+#include <llvm/ExecutionEngine/ExecutionEngine.h>
+#include <llvm/ExecutionEngine/GenericValue.h>
+#include <llvm/ExecutionEngine/JIT.h>
+#include <llvm/ExecutionEngine/JITEventListener.h>
+#include <llvm/ExecutionEngine/MCJIT.h>
+#include <llvm/Support/IRReader.h>
+#include <llvm/Support/SourceMgr.h>
+
+
 #include <array>
 #include <memory>
 #include <vector>
@@ -49,6 +65,9 @@
 #include <boost/preprocessor/repeat.hpp>
 #include <boost/swap.hpp>
 #include <boost/proto/proto.hpp>
+#include <boost/container/flat_map.hpp>
+#include <boost/function_types/function_pointer.hpp>
+#include <boost/function_types/components.hpp>
 
 #include <hermit/range_traits.hpp>
 #include <softdsp/static_range_size.hpp>
@@ -56,160 +75,106 @@
 #include <cxxabi.h>
 
 namespace softdsp {
-  namespace proto = boost::proto;
-  using proto::argsns_::list2;
-  using proto::exprns_::expr;
-  struct placeholder_ {};
-  template < typename Index >
-  struct placeholder : public placeholder_ {};
-#define HERMIT_STREAM_PLACEHOLDER( z, index, unused ) \
-  boost::proto::terminal< placeholder< boost::mpl::int_< index > > >::type const BOOST_PP_CAT( _, BOOST_PP_INC( index ) ) = {{}};
-  BOOST_PP_REPEAT( FUSION_MAX_VECTOR_SIZE, HERMIT_STREAM_PLACEHOLDER, )
-
-  template< typename parameter_types >
-  std::vector< llvm::Type* > generate_parameter_types(
-      const type_generator &type_generator_,
-      typename boost::enable_if<
-        boost::mpl::not_< boost::mpl::empty< parameter_types > >
-      >::type* = 0
-    ) {
-    auto llvm_types = generate_parameter_types< typename boost::mpl::pop_back< parameter_types >::type >( type_generator_ );
-    llvm_types.push_back( type_generator_( tag< typename boost::mpl::back< parameter_types >::type >() ) );
-    return llvm_types;
-  }
-  template< typename parameter_types >
-  std::vector< llvm::Type* > generate_parameter_types(
-      const type_generator &,
-      typename boost::enable_if<
-        boost::mpl::empty< parameter_types >
-      >::type* = 0
-    ) {
-    return std::vector< llvm::Type* >();
-  }
 
   template< typename function_type >
-  struct llvm_toolbox {
-    typedef typename boost::function_types::result_type< function_type >::type result_type;
-    typedef typename boost::function_types::parameter_types< function_type >::type parameter_types;
-    llvm_toolbox(
-      const std::shared_ptr< llvm::LLVMContext > &context_,
-      const std::string &name
-    ) : llvm_context( context_ ),
-      constant_generator_( llvm_context ),
-      type_generator_( llvm_context ),
-      ir_builder( *llvm_context ),
-      llvm_return_type( type_generator_( tag< result_type >() ) ),
-      llvm_parameter_types( generate_parameter_types< parameter_types >( type_generator_ ) ),
-      llvm_parameter_types_ref( llvm_parameter_types ),
-      llvm_function_type( llvm::FunctionType::get( llvm_return_type, llvm_parameter_types_ref,  false ) ),
-      llvm_function( llvm::Function::Create( llvm_function_type, llvm::Function::ExternalLinkage ) ) {
-      ir_builder.SetInsertPoint(
-        llvm::BasicBlock::Create( *llvm_context, name.c_str(), llvm_function )
-      );
-    }
-    const std::shared_ptr< llvm::LLVMContext > llvm_context;
-    const constant_generator constant_generator_;
-    const type_generator type_generator_;
-    llvm::IRBuilder<> ir_builder;
-    llvm::Type *llvm_return_type;
-    std::vector< llvm::Type* > llvm_parameter_types;
-    llvm::ArrayRef< llvm::Type* > llvm_parameter_types_ref;
-    llvm::FunctionType *llvm_function_type;
-    llvm::Function *llvm_function;
-  };
-
-  struct value {
-    value( llvm::Value *value_, bool is_signed_ ) : llvm_value( value_ ), is_signed( is_signed_ ) {}
-    llvm::Value * const llvm_value;
-    const bool is_signed;
-  };
-
-  template< typename function_type >
-  class softdsp_context {
+  class function {
   public:
-    typedef softdsp_context< function_type > context_type;
-    typedef boost::function_types::result_type< function_type > result_type;
-    typedef boost::function_types::parameter_types< function_type > parameter_types;
-    softdsp_context(
-      const std::shared_ptr< llvm_toolbox< function_type > > &tools_
-    ) : tools( tools_ ) {}
-    template< typename Expr, typename Enable = void > struct eval{};
-    template< typename Expr > struct eval<
-      Expr,
-      typename boost::enable_if<
-        proto::matches< Expr, proto::terminal< proto::_ > >
-      >::type
-    > {
-      typedef llvm::Value *result_type;
-      result_type operator()( Expr &expr, context_type &context ) {
-        return context.as_value( boost::proto::value( expr ) );
-      }
-    };
-    template< typename Expr > struct eval<
-      Expr,
-      typename boost::enable_if<
-        proto::matches< Expr, proto::plus< proto::_, proto::_ > >
-      >::type
-    > {
-      typedef llvm::Value *result_type;
-      result_type operator()( Expr &expr, context_type &context ) {
-        const auto left = proto::eval( boost::proto::left( expr ), context );
-        const auto right = proto::eval( boost::proto::right( expr ), context );
-        // need implicit cast
-        if( left->getType()->getScalarType()->isIntegerTy() ) {
-          return context.tools->ir_builder.CreateAdd( left, right );
-        }
-        else if( left->getType()->getScalarType()->isFloatingPointTy() ) {
-          return context.tools->ir_builder.CreateFAdd( left, right );
-        }
-        else
-          throw -1;
-      }
-    };
-    template< typename Expr > struct eval<
-      Expr,
-      typename boost::enable_if<
-        proto::matches< Expr, proto::minus< proto::_, proto::_ > >
-      >::type
-    > {
-      typedef llvm::Value *result_type;
-      result_type operator()( Expr &expr, context_type &context ) {
-        const auto left = proto::eval( boost::proto::left( expr ), context );
-        const auto right = proto::eval( boost::proto::right( expr ), context );
-        // need implicit cast
-        if( left->getType()->getScalarType()->isIntegerTy() ) {
-          return context.tools->ir_builder.CreateSub( left, right );
-        }
-        else if( left->getType()->getScalarType()->isFloatingPointTy() ) {
-          return context.tools->ir_builder.CreateFSub( left, right );
-        }
-        else
-          throw -1;
-      }
-    };
+    function(
+      const std::shared_ptr< llvm::LLVMContext > &context_,
+      const std::shared_ptr< llvm::EngineBuilder > builder_,
+      const std::shared_ptr< llvm::ExecutionEngine > engine_,
+      llvm::Function *entry_point_
+    ) : context( context_ ), builder( builder_ ), engine( engine_ ), entry_point( entry_point_ ) {
+    }
+    int operator()( int value ) {
+      return reinterpret_cast< typename boost::function_types::function_pointer< boost::function_types::components< function_type > >::type >( engine->getPointerToFunction( entry_point ) )( value );
+    }
   private:
-    template< typename value_type >
-    llvm::Value *as_value(
-      const value_type &value,
-      typename boost::disable_if<
-        boost::is_convertible<
-          placeholder_,
-          value_type
-        >
-      >::type* = 0
-    ) {
-      return tools->constant_generator_( value );
+    const std::shared_ptr< llvm::LLVMContext > context;
+    const std::shared_ptr< llvm::EngineBuilder > builder;
+    const std::shared_ptr< llvm::ExecutionEngine > engine;
+    llvm::Function *entry_point;
+  };
+
+  class executable {
+  public:
+    executable(
+      const std::shared_ptr< llvm::LLVMContext > &context_,
+      const std::shared_ptr< llvm::Module > &llvm_module_
+    ) : context( context_ ), llvm_module( llvm::CloneModule( llvm_module_.get() ) ) {
+      llvm::EngineBuilder *engine_builder = new llvm::EngineBuilder( llvm_module );
+      std::shared_ptr< std::string > error_message( new std::string );
+      engine_builder->setErrorStr( error_message.get() );
+      engine_builder->setEngineKind( llvm::EngineKind::JIT );
+      engine_builder->setOptLevel( llvm::CodeGenOpt::Aggressive );
+      engine.reset( engine_builder->create() );
+      if (!engine) {
+        delete engine_builder;
+        if (!error_message->empty())
+          llvm::errs() << "dcompile::module" << ": error creating EE: " << *error_message << "\n";
+        else
+          llvm::errs() << "dcompile::module" << ": unknown error creating EE!\n";
+        throw -1;
+      }
+      builder.reset( engine_builder, boost::bind( &executable::deleteBuilder, ::_1, engine, error_message ) );
+      builder->setRelocationModel(llvm::Reloc::Default);
+      builder->setCodeModel( llvm::CodeModel::JITDefault );
+      builder->setUseMCJIT(true);
+      engine->RegisterJITEventListener(llvm::JITEventListener::createOProfileJITEventListener());
+      engine->DisableLazyCompilation(true);
+      engine->runStaticConstructorsDestructors(false);
     }
-    template< typename Index >
-    llvm::Value *as_value(
-      const placeholder< Index > &
-    ) {
-      return &*std::next( tools->llvm_function->getArgumentList().begin(), Index::value );
+    template< typename function_type >
+    function< function_type > get_function( const std::string &name ) const {
+      llvm::Function *entry_point = llvm_module->getFunction( name.c_str() );
+      if( !entry_point )
+        throw -1;
+      return function< function_type >( context, builder, engine, entry_point );
     }
-    const std::shared_ptr< llvm_toolbox< function_type > > &tools;
+  private:
+    static void deleteBuilder(
+        llvm::EngineBuilder *builder,
+        std::shared_ptr< llvm::ExecutionEngine > engine,
+        std::shared_ptr< std::string >
+      ) {
+      engine->runStaticConstructorsDestructors(true);
+      delete builder;
+    }
+    const std::shared_ptr< llvm::LLVMContext > context;
+    const std::shared_ptr< llvm::Module > cloned_module;
+    std::shared_ptr< llvm::EngineBuilder > builder;
+    std::shared_ptr< llvm::ExecutionEngine > engine;
+    llvm::Module *llvm_module;
+  };
+
+  class module {
+  public:
+    module(
+      const std::shared_ptr< llvm::LLVMContext > &context_,
+      const std::string &name_,
+      const std::string &data_layout
+    ) : llvm_context( context_ ),
+        llvm_module( new llvm::Module( name_.c_str(), *llvm_context ) ) {
+      llvm_module->setDataLayout( data_layout );
+    }
+    template < typename function_type, typename Expr >
+    void add_function( const std::string name_, Expr &expr ) {
+      std::shared_ptr< softdsp::llvm_toolbox< function_type > > tools( new softdsp::llvm_toolbox< function_type >( llvm_context, name_.c_str() ) );
+      softdsp_context< function_type > context( tools );
+      llvm_module->getFunctionList().push_back( tools->llvm_function );
+      tools->ir_builder.CreateRet( boost::proto::eval( expr, context ) );
+    }
+    void dump() const {
+      llvm_module->dump();
+    }
+    executable compile() const {
+      return executable( llvm_context, llvm_module );
+    }
+  private:
+    const std::shared_ptr< llvm::LLVMContext > llvm_context;
+    const std::shared_ptr< llvm::Module > llvm_module;
   };
 }
-
 int main() {
   using namespace softdsp;
   std::shared_ptr< llvm::LLVMContext > context( new llvm::LLVMContext() );
@@ -301,10 +266,40 @@ int main() {
   boost::fusion::at_c< 2 >( dl0 ) = 0.5f;
   std::cout << boost::fusion::at_c< 2 >( dl0 ) << std::endl;
 
-  std::shared_ptr< softdsp::llvm_toolbox< int ( int ) > > tools( new softdsp::llvm_toolbox< int ( int ) >( context, "foo" ) );
-  softdsp_context< int ( int ) > sd_context( tools );
+  std::shared_ptr< softdsp::llvm_toolbox< int ( softdsp::data_layout::array< int, 5 > ) > > tools( new softdsp::llvm_toolbox< int ( softdsp::data_layout::array< int, 5 > ) >( context, "foo" ) );
+  softdsp_context< int ( softdsp::data_layout::array< int, 5 > ) > sd_context( tools );
   module->getFunctionList().push_back( tools->llvm_function );
-  tools->ir_builder.CreateRet( boost::proto::eval( proto::lit( 5 ) + 3 - 1 + softdsp::_1, sd_context ) );
+  tools->ir_builder.CreateRet( boost::proto::eval( proto::lit( 5 ) + 3 - 1 + softdsp::_1[ 1 ], sd_context ) );
   module->dump();
+
+  const auto roo = ct( tag< softdsp::data_layout::array< int, 5 > >() );
+  roo->dump();
+  const auto doo = ct( tag< std::array< int, 5 > >() );
+  doo->dump();
+
+  {
+    softdsp::module sd_module( context, "the_module", target_data->getStringRepresentation() );
+    sd_module.add_function< int ( softdsp::data_layout::array< int, 5 > ) >(
+      "woo",
+      proto::lit( 5 ) + 3 - 1 + softdsp::_1[ 1 ]
+    );
+    sd_module.dump();
+    const auto executable = sd_module.compile();
+  }
+  {
+    softdsp::module sd_module( context, "the_module", target_data->getStringRepresentation() );
+    sd_module.add_function< int ( int ) >(
+      "woo",
+      proto::lit( 5 ) + softdsp::_1
+    );
+    sd_module.dump();
+    const auto executable = sd_module.compile();
+    auto function = executable.get_function< int ( int ) >( "woo" );
+    std::cout << function( 2 ) << std::endl;
+    std::cout << function( 3 ) << std::endl;
+    std::cout << function( 4 ) << std::endl;
+    std::cout << function( 5 ) << std::endl;
+    std::cout << function( 6 ) << std::endl;
+  }
 }
 
