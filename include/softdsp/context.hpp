@@ -88,6 +88,11 @@ namespace softdsp {
       }
     };
 
+#define ONE_OR_MORE_UNARY_OPERANDS_ARE_LLVM_VALUE \
+  boost::mpl::or_< \
+    boost::is_convertible< ValueType, llvm::Value* > \
+  >
+
 #define ONE_OR_MORE_BINARY_OPERANDS_ARE_LLVM_VALUE \
   boost::mpl::or_< \
     boost::is_convertible< LeftType, llvm::Value* >, \
@@ -114,6 +119,64 @@ namespace softdsp {
           ); \
       } \
     };
+
+#define SOFTDSP_ENABLE_UNARY_OPERATOR( name ) \
+    template< typename Expr > struct eval< \
+      Expr, \
+      typename boost::enable_if< \
+        proto::matches< Expr, proto:: name < proto::_ > > \
+      >::type \
+    > { \
+      typedef decltype( \
+        std::declval< context_type& >(). name ( \
+          proto::eval( boost::proto::left( std::declval< Expr& >() ), std::declval< context_type& >() ) \
+        ) \
+      ) result_type; \
+      result_type operator()( Expr &expr, context_type &context ) { \
+        return context. name ( \
+            proto::eval( boost::proto::left( expr ), context ) \
+          ); \
+      } \
+    };
+
+SOFTDSP_ENABLE_UNARY_OPERATOR( dereference )
+
+    template< typename ValueType >
+    llvm::Value *dereference(
+      ValueType value_,
+      typename boost::enable_if<
+        ONE_OR_MORE_UNARY_OPERANDS_ARE_LLVM_VALUE
+      >::type* = 0
+    ) {
+      const auto value = as_llvm_value( value_ );
+      if( value->getType()->isVectorTy() ) {
+        return tools->ir_builder.CreateExtractElement( value, as_llvm_value( 0u ) );
+      }
+      else if( value->getType()->isArrayTy() ) {
+        std::vector< unsigned int > args = { 0u };
+        llvm::ArrayRef< unsigned int > args_ref( args );
+        return tools->ir_builder.CreateExtractValue( value, args_ref );
+      }
+      else if( value->getType()->isStructTy() ) {
+        std::vector< unsigned int > args = { 0u };
+        llvm::ArrayRef< unsigned int > args_ref( args );
+        return tools->ir_builder.CreateExtractValue( value, args_ref );
+      }
+      else if( value->getType()->isPointerTy() ) {
+        return tools->ir_builder.CreateLoad( value );
+      }
+      else
+        throw -1;
+    }
+    template< typename ValueType >
+    auto dereference(
+      ValueType value_,
+      typename boost::disable_if<
+        ONE_OR_MORE_UNARY_OPERANDS_ARE_LLVM_VALUE
+      >::type* = 0
+    ) -> decltype( *value_ ) {
+      return *value_;
+    }
 
 SOFTDSP_ENABLE_BINARY_OPERATOR( plus )
 
@@ -205,7 +268,8 @@ SOFTDSP_ENABLE_BINARY_OPERATOR( subscript )
         llvm::ArrayRef< unsigned int > args_ref( args );
         return tools->ir_builder.CreateExtractValue( left, args_ref );
       }
-      else if( left->getType()->getScalarType()->isPointerTy() ) {
+      else if( left->getType()->isPointerTy() ) {
+        
         throw -1.0;
       }
       else

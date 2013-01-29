@@ -153,6 +153,12 @@ namespace softdsp {
     ) const {
       return (*this)( tag< T >() );
     }
+    template< typename T >
+    llvm::Type *operator()(
+      tag< T* > 
+    ) const {
+      return llvm::PointerType::get( (*this)( tag< T >() ), 0 );
+    }
   private:
     template< typename begin, typename end >
     void transform_struct(

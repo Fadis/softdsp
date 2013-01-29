@@ -116,14 +116,14 @@ namespace softdsp {
                 tag< boost::fusion::vector< Args... > >()
               )
             )
-          ) 
-        ) {
+          )
+        ), head( boost::begin( range_ ) ) {
       }
-      tuple(
-        const std::shared_ptr< llvm::LLVMContext > &context_,
-        const std::string &layout_
-      ) : internal_container( construct_internal_container< internal_container >( context_, layout_ ) ) {}
+      const uint8_t * get() const {
+        return head;
+      }
     private:
+      const uint8_t * const head;
     };
   }
 }

@@ -32,20 +32,15 @@ namespace softdsp {
       array(
         const std::shared_ptr< common > &common_resources_,
         const boost::iterator_range< uint8_t* > &range_
-      ) : container( construct_internal_container( common_resources_, range_ ) ) {}
-      array(
-        const std::shared_ptr< llvm::LLVMContext > &context_,
-        const std::string &layout_
-      ) : container( construct_internal_container( context_, layout_ ) )
-      {
-      }
+      ) : container( construct_internal_container( common_resources_, range_ ) ),
+      head( boost::begin( range_ ) ) {}
       array(
         const array< T, size_ > &src
-      ) : container( src.container ) {
+      ) : container( src.container ), head( src.head ) {
       }
       array(
         array< T, size_ > &&src
-      ) : container( src.container ) {
+      ) : container( src.container ), head( src.head ) {
       }
       reference at( size_type index ) {
         return container.at( index );
@@ -119,6 +114,9 @@ namespace softdsp {
       void swap( array< T, size_ > &other ) {
         boost::swap( container, other.container );
       }
+      const uint8_t *get() const {
+        return head;
+      }
     private:
       static internal_container construct_internal_container(
         const std::shared_ptr< common > &common_resources_,
@@ -157,6 +155,7 @@ namespace softdsp {
         );
       }
       internal_container container; 
+      const uint8_t * const head;
     };
     template< typename T, size_t size_ >
     boost::mpl::size_t< size_ > get_static_range_size( array< T, size_ > );
