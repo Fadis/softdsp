@@ -66,6 +66,24 @@ namespace softdsp {
   using proto::argsns_::list2;
   using proto::exprns_::expr;
 
+  struct return_value_ {};
+
+  template< typename T >
+  struct return_value : public return_value_ {
+    return_value( llvm::Value *value_ ) : value( value_ ) {}
+    llvm::Value *value;
+  };
+
+  template< typename T >
+  struct get_return_type {
+    typedef T type;
+  };
+  template< typename T >
+  struct get_return_type< return_value< T > > {
+    typedef T type;
+  };
+
+
   template< typename function_type >
   class softdsp_context {
   public:
@@ -90,13 +108,13 @@ namespace softdsp {
 
 #define ONE_OR_MORE_UNARY_OPERANDS_ARE_LLVM_VALUE \
   boost::mpl::or_< \
-    boost::is_convertible< ValueType, llvm::Value* > \
+    boost::is_convertible< ValueType, return_value_ > \
   >
 
 #define ONE_OR_MORE_BINARY_OPERANDS_ARE_LLVM_VALUE \
   boost::mpl::or_< \
-    boost::is_convertible< LeftType, llvm::Value* >, \
-    boost::is_convertible< RightType, llvm::Value* > \
+    boost::is_convertible< LeftType, return_value_ >, \
+    boost::is_convertible< RightType, return_value_ > \
   >
 
 #define SOFTDSP_ENABLE_BINARY_OPERATOR( name ) \
@@ -142,37 +160,98 @@ namespace softdsp {
 SOFTDSP_ENABLE_UNARY_OPERATOR( dereference )
 
     template< typename ValueType >
-    llvm::Value *dereference(
+    return_value<
+      typename hermit::range_value<
+         typename get_return_type< ValueType >::type
+      >::type
+    >
+    dereference(
       ValueType value_,
       typename boost::enable_if<
-        ONE_OR_MORE_UNARY_OPERANDS_ARE_LLVM_VALUE
+        boost::mpl::and_<
+          ONE_OR_MORE_UNARY_OPERANDS_ARE_LLVM_VALUE,
+          hermit::is_forward_traversal_range< typename get_return_type< ValueType >::type >
+        >
       >::type* = 0
     ) {
       const auto value = as_llvm_value( value_ );
-      if( value->getType()->isVectorTy() ) {
-        return tools->ir_builder.CreateExtractElement( value, as_llvm_value( 0u ) );
+      if( value.value->getType()->isVectorTy() ) {
+        return return_value<
+          typename hermit::range_value<
+            typename ValueType::type
+          >::type
+        >(
+          tools->ir_builder.CreateExtractElement(
+            value.value,
+            as_llvm_value( 0u )
+          )
+        );
       }
-      else if( value->getType()->isArrayTy() ) {
+      else if( value.value->getType()->isArrayTy() ) {
         std::vector< unsigned int > args = { 0u };
         llvm::ArrayRef< unsigned int > args_ref( args );
-        return tools->ir_builder.CreateExtractValue( value, args_ref );
-      }
-      else if( value->getType()->isStructTy() ) {
-        std::vector< unsigned int > args = { 0u };
-        llvm::ArrayRef< unsigned int > args_ref( args );
-        return tools->ir_builder.CreateExtractValue( value, args_ref );
-      }
-      else if( value->getType()->isPointerTy() ) {
-        return tools->ir_builder.CreateLoad( value );
+        return return_value<
+          typename hermit::range_value<
+            typename ValueType::type
+          >::type
+        >(
+          tools->ir_builder.CreateExtractValue( value.value, args_ref )
+        );
       }
       else
         throw -1;
     }
     template< typename ValueType >
+    return_value<
+      typename boost::remove_pointer<
+        typename get_return_type< ValueType >::type
+      >::type
+    >
+    dereference(
+      ValueType value_,
+      typename boost::enable_if<
+        boost::mpl::and_<
+          ONE_OR_MORE_UNARY_OPERANDS_ARE_LLVM_VALUE,
+          boost::is_pointer< typename get_return_type< ValueType >::type >
+        >
+      >::type* = 0
+    ) {
+      const auto value = as_llvm_value( value_ );
+      if( value.value->getType()->isPointerTy() ) {
+        return return_value<
+          typename boost::remove_pointer<
+            typename get_return_type< ValueType >::type
+          >::type
+        >(
+          tools->ir_builder.CreateLoad( value.value )
+        );
+      }
+      else
+        throw -1;
+    }
+    template< typename ValueType >
+    typename hermit::range_value<
+      typename get_return_type< ValueType >::type
+    >::type
+    dereference(
+      ValueType value_,
+      typename boost::enable_if<
+        boost::mpl::and_<
+          boost::mpl::not_< ONE_OR_MORE_UNARY_OPERANDS_ARE_LLVM_VALUE >,
+          hermit::is_forward_traversal_range< typename get_return_type< ValueType >::type >
+        >
+      >::type* = 0
+    ) {
+      return *boost::begin( value_ );
+    }
+    template< typename ValueType >
     auto dereference(
       ValueType value_,
-      typename boost::disable_if<
-        ONE_OR_MORE_UNARY_OPERANDS_ARE_LLVM_VALUE
+      typename boost::enable_if<
+        boost::mpl::and_<
+          boost::mpl::not_< ONE_OR_MORE_UNARY_OPERANDS_ARE_LLVM_VALUE >,
+          boost::is_pointer< typename get_return_type< ValueType >::type >
+        >
       >::type* = 0
     ) -> decltype( *value_ ) {
       return *value_;
@@ -181,20 +260,41 @@ SOFTDSP_ENABLE_UNARY_OPERATOR( dereference )
 SOFTDSP_ENABLE_BINARY_OPERATOR( plus )
 
     template< typename LeftType, typename RightType >
-    llvm::Value *plus(
+    auto plus(
       LeftType left_, RightType right_,
       typename boost::enable_if<
         ONE_OR_MORE_BINARY_OPERANDS_ARE_LLVM_VALUE
       >::type* = 0
-    ) {
+    ) -> return_value<
+      decltype(
+        std::declval< typename get_return_type< LeftType >::type >() +
+        std::declval< typename get_return_type< RightType >::type >()
+      )
+    > {
       const auto left = as_llvm_value( left_ );
       const auto right = as_llvm_value( right_ );
       // need implicit cast
-      if( left->getType()->getScalarType()->isIntegerTy() ) {
-        return tools->ir_builder.CreateAdd( left, right );
+      if( left.value->getType()->getScalarType()->isIntegerTy() ) {
+        return
+          return_value<
+            decltype(
+              std::declval< typename get_return_type< LeftType >::type >() +
+              std::declval< typename get_return_type< RightType >::type >()
+            )
+          >(
+            tools->ir_builder.CreateAdd( left.value, right.value )
+          );
       }
-      else if( left->getType()->getScalarType()->isFloatingPointTy() ) {
-        return tools->ir_builder.CreateFAdd( left, right );
+      else if( left.value->getType()->getScalarType()->isFloatingPointTy() ) {
+        return
+          return_value<
+            decltype(
+              std::declval< typename get_return_type< LeftType >::type >() +
+              std::declval< typename get_return_type< RightType >::type >()
+            )
+          >(
+            tools->ir_builder.CreateFAdd( left.value, right.value )
+          );
       }
       else
         throw -1;
@@ -212,20 +312,41 @@ SOFTDSP_ENABLE_BINARY_OPERATOR( plus )
 SOFTDSP_ENABLE_BINARY_OPERATOR( minus )
 
     template< typename LeftType, typename RightType >
-    llvm::Value *minus(
+    auto minus(
       LeftType left_, RightType right_,
       typename boost::enable_if<
         ONE_OR_MORE_BINARY_OPERANDS_ARE_LLVM_VALUE
       >::type* = 0
-    ) {
+    ) -> return_value<
+      decltype(
+        std::declval< typename get_return_type< LeftType >::type >() -
+        std::declval< typename get_return_type< RightType >::type >()
+      )
+    > {
       const auto left = as_llvm_value( left_ );
       const auto right = as_llvm_value( right_ );
       // need implicit cast
-      if( left->getType()->getScalarType()->isIntegerTy() ) {
-        return tools->ir_builder.CreateSub( left, right );
+      if( left.value->getType()->getScalarType()->isIntegerTy() ) {
+        return
+          return_value<
+            decltype(
+              std::declval< typename get_return_type< LeftType >::type >() -
+              std::declval< typename get_return_type< RightType >::type >()
+            )
+          >(
+            tools->ir_builder.CreateSub( left.value, right.value )
+          );
       }
-      else if( left->getType()->getScalarType()->isFloatingPointTy() ) {
-        return tools->ir_builder.CreateFSub( left, right );
+      else if( left.value->getType()->getScalarType()->isFloatingPointTy() ) {
+        return
+          return_value<
+            decltype(
+              std::declval< typename get_return_type< LeftType >::type >() -
+              std::declval< typename get_return_type< RightType >::type >()
+            )
+          >(
+            tools->ir_builder.CreateFSub( left.value, right.value )
+          );
       }
       else
         throw -1;
@@ -243,59 +364,120 @@ SOFTDSP_ENABLE_BINARY_OPERATOR( minus )
 SOFTDSP_ENABLE_BINARY_OPERATOR( subscript )
 
     template< typename LeftType, typename RightType >
-    llvm::Value *subscript(
-      LeftType left_, RightType right_,
+    return_value<
+      typename hermit::range_value<
+         typename get_return_type< LeftType >::type
+      >::type
+    >
+    subscript(
+      LeftType left_,
+      RightType right_,
       typename boost::enable_if<
-        boost::mpl::or_<
-          boost::fusion::traits::is_sequence< RightType >,
-          boost::is_convertible< LeftType, llvm::Value* >
+        boost::mpl::and_<
+          ONE_OR_MORE_BINARY_OPERANDS_ARE_LLVM_VALUE,
+          hermit::is_forward_traversal_range< typename get_return_type< LeftType >::type >
         >
       >::type* = 0
     ) {
       const auto left = as_llvm_value( left_ );
-      // need implicit cast
-      if( left->getType()->isVectorTy() ) {
+      if( left.value->getType()->isVectorTy() ) {
         const auto right = as_llvm_value( right_ );
-        return tools->ir_builder.CreateExtractElement( left, right );
+        return return_value<
+          typename hermit::range_value<
+            typename get_return_type< LeftType >::type
+          >::type
+        >(
+          tools->ir_builder.CreateExtractElement( left.value, right.value )
+        );
       }
-      else if( left->getType()->isArrayTy() ) {
+      else if( left.value->getType()->isArrayTy() ) {
         std::vector< unsigned int > args = { static_cast< unsigned int >( right_ ) };
         llvm::ArrayRef< unsigned int > args_ref( args );
-        return tools->ir_builder.CreateExtractValue( left, args_ref );
-      }
-      else if( left->getType()->isStructTy() ) {
-        std::vector< unsigned int > args = { static_cast< unsigned int >( right_ ) };
-        llvm::ArrayRef< unsigned int > args_ref( args );
-        return tools->ir_builder.CreateExtractValue( left, args_ref );
-      }
-      else if( left->getType()->isPointerTy() ) {
-        
-        throw -1.0;
+        return return_value<
+          typename hermit::range_value<
+            typename get_return_type< LeftType >::type
+          >::type
+        >(
+          tools->ir_builder.CreateExtractValue( left.value, args_ref )
+        );
       }
       else
         throw -1;
     }
     template< typename LeftType, typename RightType >
+    return_value<
+      typename boost::remove_pointer<
+        typename get_return_type< LeftType >::type
+      >::type
+    >
+    subscript(
+      LeftType left_, RightType right_,
+      typename boost::enable_if<
+        boost::mpl::and_<
+          ONE_OR_MORE_BINARY_OPERANDS_ARE_LLVM_VALUE,
+          boost::is_pointer< typename get_return_type< LeftType >::type >
+        >
+      >::type* = 0
+    ) {
+      const auto left = as_llvm_value( left_ );
+      const auto right = as_llvm_value( right_ );
+      if( left.value->getType()->isPointerTy() ) {
+        return return_value<
+          typename boost::remove_pointer<
+            typename get_return_type< LeftType >::type
+          >::type
+        >(
+          tools->ir_builder.CreateLoad(
+            tools->ir_builder.CreateAdd(
+              left.value,
+              mul(
+                right.value,
+                tools->data_layout->getTypeAlllocSize(
+                  left.value->getType()
+                )
+              )
+            )
+          )
+        );
+      }
+      else
+        throw -1;
+    }
+    template< typename LeftType, typename RightType >
+    typename hermit::range_value<
+      typename get_return_type< LeftType >::type
+    >::type
+    subscript(
+      LeftType left_, RightType right_,
+      typename boost::enable_if<
+        boost::mpl::and_<
+          boost::mpl::not_< ONE_OR_MORE_BINARY_OPERANDS_ARE_LLVM_VALUE >,
+          hermit::is_forward_traversal_range< typename get_return_type< LeftType >::type >
+        >
+      >::type* = 0
+    ) {
+      return *std::next( boost::begin( left_ ), right_ );
+    }
+    template< typename LeftType, typename RightType >
     auto subscript(
       LeftType left_, RightType right_,
-      typename boost::disable_if<
-        boost::mpl::or_<
-          boost::fusion::traits::is_sequence< RightType >,
-          boost::is_convertible< LeftType, llvm::Value* >
+      typename boost::enable_if<
+        boost::mpl::and_<
+          boost::mpl::not_< ONE_OR_MORE_BINARY_OPERANDS_ARE_LLVM_VALUE >,
+          boost::is_pointer< typename get_return_type< LeftType >::type >
         >
       >::type* = 0
     ) -> decltype( left_[ right_ ] ) {
       return left_[ right_ ];
     }
-
   private:
     template< typename value_type >
-    llvm::Value *as_llvm_value(
+    return_value< value_type > as_llvm_value(
       const value_type &value,
       typename boost::disable_if<
         boost::is_convertible<
-          llvm::Value*,
-          value_type
+          value_type,
+          return_value_
         >
       >::type* = 0
     ) {
@@ -306,15 +488,15 @@ SOFTDSP_ENABLE_BINARY_OPERATOR( subscript )
           std::shared_ptr< value_info >( new value_info( boost::is_signed< value_type >::value ) )
         )
       );
-      return llvm_value;
+      return return_value< value_type >( llvm_value );
     }
     template< typename value_type >
-    llvm::Value *as_llvm_value(
+    value_type as_llvm_value(
       const value_type &value,
       typename boost::enable_if<
         boost::is_convertible<
-          llvm::Value*,
-          value_type
+          value_type,
+          return_value_
         >
       >::type* = 0
     ) {
@@ -333,10 +515,21 @@ SOFTDSP_ENABLE_BINARY_OPERATOR( subscript )
       return value;
     }
     template< typename Index >
-    llvm::Value *as_value(
+    return_value<
+      typename boost::mpl::at<
+        boost::function_types::parameter_types< function_type >,
+        Index
+      >::type
+    > as_value(
       const placeholder< Index > &
     ) {
-      return &*std::next( tools->llvm_function->getArgumentList().begin(), Index::value );
+      llvm::Value *value = &*std::next( tools->llvm_function->getArgumentList().begin(), Index::value );
+      return return_value<
+        typename boost::mpl::at<
+          boost::function_types::parameter_types< function_type >,
+          Index
+        >::type
+      >( value );
     }
     const std::shared_ptr< llvm_toolbox< function_type > > &tools;
   };
