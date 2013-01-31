@@ -15,6 +15,7 @@
 #include <softdsp/data_layout/tuple.hpp>
 #include <softdsp/placeholders.hpp>
 #include <softdsp/llvm_toolbox.hpp>
+#include <softdsp/return_value.hpp>
 
 #include <llvm/ADT/ArrayRef.h>
 #include <llvm/LLVMContext.h>
@@ -66,24 +67,6 @@ namespace softdsp {
   using proto::argsns_::list2;
   using proto::exprns_::expr;
 
-  struct return_value_ {};
-
-  template< typename T >
-  struct return_value : public return_value_ {
-    return_value( llvm::Value *value_ ) : value( value_ ) {}
-    llvm::Value *value;
-  };
-
-  template< typename T >
-  struct get_return_type {
-    typedef T type;
-  };
-  template< typename T >
-  struct get_return_type< return_value< T > > {
-    typedef T type;
-  };
-
-
   template< typename function_type >
   class softdsp_context {
   public:
@@ -100,9 +83,9 @@ namespace softdsp {
         proto::matches< Expr, proto::terminal< proto::_ > >
       >::type
     > {
-      typedef decltype( std::declval< context_type& >().as_value( boost::proto::value( std::declval< Expr& >() ) ) ) result_type;
+      typedef decltype( std::declval< context_type& >().tools->as_value( boost::proto::value( std::declval< Expr& >() ) ) ) result_type;
       result_type operator()( Expr &expr, context_type &context ) {
-        return context.as_value( boost::proto::value( expr ) );
+        return context.tools->as_value( boost::proto::value( expr ) );
       }
     };
 
@@ -174,7 +157,7 @@ SOFTDSP_ENABLE_UNARY_OPERATOR( dereference )
         >
       >::type* = 0
     ) {
-      const auto value = as_llvm_value( value_ );
+      const auto value = tools->as_llvm_value( value_ );
       if( value.value->getType()->isVectorTy() ) {
         return return_value<
           typename hermit::range_value<
@@ -183,7 +166,7 @@ SOFTDSP_ENABLE_UNARY_OPERATOR( dereference )
         >(
           tools->ir_builder.CreateExtractElement(
             value.value,
-            as_llvm_value( 0u )
+            tools->as_llvm_value( 0u )
           )
         );
       }
@@ -216,7 +199,7 @@ SOFTDSP_ENABLE_UNARY_OPERATOR( dereference )
         >
       >::type* = 0
     ) {
-      const auto value = as_llvm_value( value_ );
+      const auto value = tools->as_llvm_value( value_ );
       if( value.value->getType()->isPointerTy() ) {
         return return_value<
           typename boost::remove_pointer<
@@ -271,8 +254,8 @@ SOFTDSP_ENABLE_BINARY_OPERATOR( plus )
         std::declval< typename get_return_type< RightType >::type >()
       )
     > {
-      const auto left = as_llvm_value( left_ );
-      const auto right = as_llvm_value( right_ );
+      const auto left = tools->as_llvm_value( left_ );
+      const auto right = tools->as_llvm_value( right_ );
       // need implicit cast
       if( left.value->getType()->getScalarType()->isIntegerTy() ) {
         return
@@ -323,8 +306,8 @@ SOFTDSP_ENABLE_BINARY_OPERATOR( minus )
         std::declval< typename get_return_type< RightType >::type >()
       )
     > {
-      const auto left = as_llvm_value( left_ );
-      const auto right = as_llvm_value( right_ );
+      const auto left = tools->as_llvm_value( left_ );
+      const auto right = tools->as_llvm_value( right_ );
       // need implicit cast
       if( left.value->getType()->getScalarType()->isIntegerTy() ) {
         return
@@ -379,9 +362,9 @@ SOFTDSP_ENABLE_BINARY_OPERATOR( subscript )
         >
       >::type* = 0
     ) {
-      const auto left = as_llvm_value( left_ );
+      const auto left = tools->as_llvm_value( left_ );
       if( left.value->getType()->isVectorTy() ) {
-        const auto right = as_llvm_value( right_ );
+        const auto right = tools->as_llvm_value( right_ );
         return return_value<
           typename hermit::range_value<
             typename get_return_type< LeftType >::type
@@ -419,8 +402,8 @@ SOFTDSP_ENABLE_BINARY_OPERATOR( subscript )
         >
       >::type* = 0
     ) {
-      const auto left = as_llvm_value( left_ );
-      const auto right = as_llvm_value( right_ );
+      const auto left = tools->as_llvm_value( left_ );
+      const auto right = tools->as_llvm_value( right_ );
       if( left.value->getType()->isPointerTy() ) {
         return return_value<
           typename boost::remove_pointer<
@@ -471,66 +454,6 @@ SOFTDSP_ENABLE_BINARY_OPERATOR( subscript )
       return left_[ right_ ];
     }
   private:
-    template< typename value_type >
-    return_value< value_type > as_llvm_value(
-      const value_type &value,
-      typename boost::disable_if<
-        boost::is_convertible<
-          value_type,
-          return_value_
-        >
-      >::type* = 0
-    ) {
-      llvm::Value *llvm_value = tools->constant_generator_( value );
-      tools->extra_value_info.insert(
-        std::make_pair(
-          llvm_value,
-          std::shared_ptr< value_info >( new value_info( boost::is_signed< value_type >::value ) )
-        )
-      );
-      return return_value< value_type >( llvm_value );
-    }
-    template< typename value_type >
-    value_type as_llvm_value(
-      const value_type &value,
-      typename boost::enable_if<
-        boost::is_convertible<
-          value_type,
-          return_value_
-        >
-      >::type* = 0
-    ) {
-      return value;
-    }
-    template< typename value_type >
-    value_type as_value(
-      const value_type &value,
-      typename boost::disable_if<
-        boost::is_convertible<
-          placeholder_,
-          value_type
-        >
-      >::type* = 0
-    ) {
-      return value;
-    }
-    template< typename Index >
-    return_value<
-      typename boost::mpl::at<
-        boost::function_types::parameter_types< function_type >,
-        Index
-      >::type
-    > as_value(
-      const placeholder< Index > &
-    ) {
-      llvm::Value *value = &*std::next( tools->llvm_function->getArgumentList().begin(), Index::value );
-      return return_value<
-        typename boost::mpl::at<
-          boost::function_types::parameter_types< function_type >,
-          Index
-        >::type
-      >( value );
-    }
     const std::shared_ptr< llvm_toolbox< function_type > > &tools;
   };
 }

@@ -4,6 +4,7 @@
 #include <softdsp/constant_generator.hpp>
 #include <softdsp/tag.hpp>
 #include <softdsp/type_generator.hpp>
+#include <softdsp/return_value.hpp>
 
 #include <llvm/ADT/ArrayRef.h>
 #include <llvm/LLVMContext.h>
@@ -96,6 +97,66 @@ namespace softdsp {
       ir_builder.SetInsertPoint(
         llvm::BasicBlock::Create( *llvm_context, name.c_str(), llvm_function )
       );
+    }
+    template< typename value_type >
+    return_value< value_type > as_llvm_value(
+      const value_type &value,
+      typename boost::disable_if<
+        boost::is_convertible<
+          value_type,
+          return_value_
+        >
+      >::type* = 0
+    ) {
+      llvm::Value *llvm_value = constant_generator_( value );
+      extra_value_info.insert(
+        std::make_pair(
+          llvm_value,
+          std::shared_ptr< value_info >( new value_info( boost::is_signed< value_type >::value ) )
+        )
+      );
+      return return_value< value_type >( llvm_value );
+    }
+    template< typename value_type >
+    value_type as_llvm_value(
+      const value_type &value,
+      typename boost::enable_if<
+        boost::is_convertible<
+          value_type,
+          return_value_
+        >
+      >::type* = 0
+    ) {
+      return value;
+    }
+    template< typename value_type >
+    value_type as_value(
+      const value_type &value,
+      typename boost::disable_if<
+        boost::is_convertible<
+          placeholder_,
+          value_type
+        >
+      >::type* = 0
+    ) {
+      return value;
+    }
+    template< typename Index >
+    return_value<
+      typename boost::mpl::at<
+        boost::function_types::parameter_types< function_type >,
+        Index
+      >::type
+    > as_value(
+      const placeholder< Index > &
+    ) {
+      llvm::Value *value = &*std::next( llvm_function->getArgumentList().begin(), Index::value );
+      return return_value<
+        typename boost::mpl::at<
+          boost::function_types::parameter_types< function_type >,
+          Index
+        >::type
+      >( value );
     }
     const std::shared_ptr< llvm::LLVMContext > llvm_context;
     const constant_generator constant_generator_;
