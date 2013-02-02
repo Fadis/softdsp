@@ -100,6 +100,50 @@ SOFTDSP_ENABLE_UNARY_OPERATOR_( dereference )
 SOFTDSP_ENABLE_BINARY_OPERATOR_( plus )
 SOFTDSP_ENABLE_BINARY_OPERATOR_( minus )
 SOFTDSP_ENABLE_BINARY_OPERATOR_( subscript )
+
+#define SOFTDSP_CONTEXT_FUNCTION_PROTO_( z, index, unused ) \
+  proto::_
+
+#define SOFTDSP_CONTEXT_FUNCTION_ARGUMENTS_DECLTYPE( z, index, unused ) \
+  proto::eval( \
+    boost::proto::child< boost::mpl::int_< BOOST_PP_INC( index ) > >( \
+      std::declval< Expr& >() \
+    ), \
+    std::declval< context_type& >() \
+  )
+
+#define SOFTDSP_CONTEXT_FUNCTION_ARGUMENTS( z, index, unused ) \
+  proto::eval( boost::proto::child< boost::mpl::int_< BOOST_PP_INC( index ) > >( expr ), context )
+
+#define SOFTDSP_CONTEXT_FUNCTION( z, arg_num, unused ) \
+  template< \
+    class Expr \
+  > struct eval< \
+    Expr, \
+    typename boost::enable_if< \
+      proto::matches< Expr, proto::function< BOOST_PP_ENUM( arg_num, SOFTDSP_CONTEXT_FUNCTION_PROTO_, ) > > \
+    >::type \
+  > { \
+    typedef decltype( \
+      std::declval< \
+        decltype( proto::eval( boost::proto::left( std::declval< Expr >() ), std::declval< context_type >() ) ) \
+      >()( \
+        BOOST_PP_ENUM( BOOST_PP_DEC( arg_num ), SOFTDSP_CONTEXT_FUNCTION_ARGUMENTS_DECLTYPE, ) \
+      ) \
+    ) result_type; \
+    result_type operator()( Expr &expr, context_type &context ) { \
+      decltype( proto::eval( boost::proto::left( expr ), context ) ) function( context ); \
+      return function( \
+        BOOST_PP_ENUM( BOOST_PP_DEC( arg_num ), SOFTDSP_CONTEXT_FUNCTION_ARGUMENTS, ) \
+      );\
+    } \
+  };
+
+BOOST_PP_REPEAT_FROM_TO( 1, FUSION_MAX_VECTOR_SIZE, SOFTDSP_CONTEXT_FUNCTION, )
+
+    toolbox_type &get_toolbox() {
+      return tools;
+    }
     const toolbox_type &get_toolbox() const {
       return tools;
     }
