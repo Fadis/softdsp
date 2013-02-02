@@ -4,6 +4,7 @@
 #include <softdsp/data_layout/load_value_at.hpp>
 #include <softdsp/data_layout/store_value_at.hpp>
 #include <softdsp/data_layout/common.hpp>
+#include <softdsp/primitive.hpp>
 
 #include <memory>
 #include <boost/range/algorithm.hpp>
@@ -42,6 +43,20 @@ namespace softdsp {
       const boost::iterator_range< uint8_t* > range;
     };
   }
+  template< typename T >
+  struct is_primitive< data_layout::proxy< T > >
+  : public boost::mpl::or_<
+    boost::is_integral<
+      typename boost::remove_cv<
+        T
+      >::type
+    >,
+    boost::is_floating_point<
+      typename boost::remove_cv<
+        T
+      >::type
+    >
+  >{};
 }
 
 #endif

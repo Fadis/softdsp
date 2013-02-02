@@ -33,7 +33,7 @@ namespace softdsp {
       >::type* = 0
     ) {
     auto llvm_types = generate_parameter_types< typename boost::mpl::pop_back< parameter_types >::type >( type_generator_ );
-    llvm_types.push_back( type_generator_( tag< typename boost::mpl::back< parameter_types >::type >() ) );
+    llvm_types.push_back( type_generator_( tag< typename boost::mpl::back< parameter_types >::type* >() ) );
     return llvm_types;
   }
   template< typename parameter_types >
@@ -146,7 +146,7 @@ namespace softdsp {
       typename boost::mpl::at<
         boost::function_types::parameter_types< function_type >,
         Index
-      >::type
+      >::type&
     > as_value(
       const placeholder< Index > &
     ) {
@@ -155,8 +155,47 @@ namespace softdsp {
         typename boost::mpl::at<
           boost::function_types::parameter_types< function_type >,
           Index
-        >::type
+        >::type&
       >( value );
+    }
+    template< typename value_type >
+    return_value<
+      typename boost::remove_reference<
+        typename get_return_type< value_type >::type
+      >::type
+    >
+    load(
+      value_type value,
+      typename boost::enable_if<
+        boost::mpl::and_<
+          boost::is_convertible< value_type, return_value_ >,
+          boost::is_reference< typename get_return_type< value_type >::type >
+        >
+      >::type* = 0
+    ) {
+      return
+        return_value<
+          typename boost::remove_reference<
+            typename get_return_type< value_type >::type
+          >::type
+        >(
+          ir_builder.CreateLoad( value.value )
+        );
+    }
+    template< typename value_type >
+    value_type
+    load(
+      value_type value,
+      typename boost::enable_if<
+        boost::mpl::not_<
+          boost::mpl::and_<
+            boost::is_convertible< value_type, return_value_ >,
+            boost::is_reference< typename get_return_type< value_type >::type >
+          >
+        >
+      >::type* = 0
+    ) {
+      return value;
     }
     const std::shared_ptr< llvm::LLVMContext > llvm_context;
     const constant_generator constant_generator_;

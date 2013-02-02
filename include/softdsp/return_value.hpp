@@ -3,6 +3,8 @@
 
 #include <llvm/Value.h>
 
+#include <softdsp/primitive.hpp>
+
 namespace softdsp {
   struct return_value_ {};
 
@@ -20,6 +22,21 @@ namespace softdsp {
   struct get_return_type< return_value< T > > {
     typedef T type;
   };
+  
+  template< typename T >
+  struct is_primitive< return_value< T > >
+  : public boost::mpl::or_<
+    boost::is_integral<
+      typename boost::remove_cv<
+        T
+      >::type
+    >,
+    boost::is_floating_point<
+      typename boost::remove_cv<
+        T
+      >::type
+    >
+  >{};
 }
 
 #endif

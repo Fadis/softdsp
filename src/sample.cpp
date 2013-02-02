@@ -163,7 +163,15 @@ namespace softdsp {
       std::shared_ptr< softdsp::llvm_toolbox< function_type > > tools( new softdsp::llvm_toolbox< function_type >( llvm_context, name_.c_str() ) );
       softdsp_context< function_type > context( tools );
       llvm_module->getFunctionList().push_back( tools->llvm_function );
-      tools->ir_builder.CreateRet( boost::proto::eval( expr, context ).value );
+      const auto result = boost::proto::eval( expr, context );
+      int status;
+      std::cout << abi::__cxa_demangle( typeid( result ).name(), 0, 0, &status ) << std::endl;
+      result.value->getType()->dump();
+      tools->ir_builder.CreateRet(
+        tools->as_llvm_value(
+          tools->load( result )
+        ).value
+      );
     }
     void dump() const {
       llvm_module->dump();
@@ -205,7 +213,7 @@ int main() {
   std::shared_ptr< llvm::LLVMContext > context( new llvm::LLVMContext() );
   llvm::Module *module = new llvm::Module( "foo_bar", *context );
   llvm::IRBuilder<> builder( *context );
-
+/*
   std::vector< llvm::Type* > args_raw( 2 );
   args_raw[ 0 ] = static_cast< llvm::Type* >( llvm::VectorType::get( builder.getFloatTy(), 4 ) );
   args_raw[ 1 ] = static_cast< llvm::Type* >( llvm::VectorType::get( builder.getFloatTy(), 4 ) );
@@ -248,11 +256,11 @@ int main() {
 
 
   auto &arg_values = func2->getArgumentList();
-  /*auto result = llvm::BinaryOperator::Create(
-    llvm::Instruction::FAdd,
-    static_cast< llvm::Value* >( &arg_values.front() ),
-    static_cast< llvm::Value* >( &arg_values.back() )
-  );*/
+  //auto result = llvm::BinaryOperator::Create(
+  //  llvm::Instruction::FAdd,
+  //  static_cast< llvm::Value* >( &arg_values.front() ),
+  //  static_cast< llvm::Value* >( &arg_values.back() )
+  //);
   auto result = builder.CreateFAdd(
     static_cast< llvm::Value* >( &arg_values.front() ),
     static_cast< llvm::Value* >( &arg_values.back() ) );
@@ -312,20 +320,40 @@ int main() {
     );
     sd_module.dump();
     const auto executable = sd_module.compile();
-  }
+  }*/
   {
+  llvm::InitializeNativeTarget();
+  std::string error;
+  const llvm::Target * const target = llvm::TargetRegistry::lookupTarget( "x86_64-pc-linux", error );
+  if( !error.empty() ) {
+    std::cout << error << std::endl;
+  }
+  llvm::TargetOptions target_opts;
+  target_opts.UseInitArray = 0;
+  target_opts.UseSoftFloat = 0;
+  target_opts.FloatABIType = llvm::FloatABI::Hard;
+  const std::shared_ptr< llvm::TargetMachine > target_machine( target->createTargetMachine( "x86_64-pc-linux", "core2", "", target_opts ) );
+  if( !target_machine ) {
+    std::cout << "unable to create target machine." << std::endl;
+  }
+  const llvm::DataLayout *target_data = target_machine->getDataLayout();
+  module->setTargetTriple( "x86_64-pc-linux" );
+  module->setDataLayout( target_data->getStringRepresentation() );
     softdsp::module sd_module( context, "the_module", target_data->getStringRepresentation() );
-    sd_module.add_function< int ( softdsp::data_layout::array< int, 5 >* ) >(
+    sd_module.add_function< int ( softdsp::data_layout::array< int, 5 > ) >(
       "woo",
-      proto::lit( 5 ) + (*softdsp::_1)[ 0 ] + (*softdsp::_1)[ 2 ]
+      (softdsp::_1)[ 0 ]
     );
     sd_module.dump();
+    value_generator vg( context, module->getDataLayout() );
     auto arg1 = vg( tag< softdsp::data_layout::array< int, 5 > >() );
     arg1[ 0 ] = 1;
     arg1[ 1 ] = 2;
     arg1[ 2 ] = 3;
+    std::shared_ptr< softdsp::llvm_toolbox< int ( softdsp::data_layout::array< int, 5 > ) > > tools( new softdsp::llvm_toolbox< int ( softdsp::data_layout::array< int, 5 > ) >( context, "foo" ) );
+    softdsp_context< int ( softdsp::data_layout::array< int, 5 > ) > sd_context( tools );
     const auto executable = sd_module.compile();
-    auto function = executable.get_function< int ( softdsp::data_layout::array< int, 5 >* ) >( "woo" );
+    auto function = executable.get_function< int ( softdsp::data_layout::array< int, 5 > ) >( "woo" );
     std::cout << function( arg1 ) << std::endl;
   }
 }
