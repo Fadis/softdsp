@@ -148,10 +148,7 @@ namespace softdsp {
         );
         return construct_internal_container(
           common_resources_,
-          boost::iterator_range< uint8_t* >(
-            common_resources_->data.data(),
-            common_resources_->data.data() + common_resources_->data.size() 
-          )
+          common_resources_->root
         );
       }
       internal_container container; 

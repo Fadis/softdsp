@@ -89,7 +89,7 @@ namespace softdsp {
 
   template< typename head, typename ...tail >
   struct at_least_one_operand_is_primitive< head, tail... >
-    : boost::mpl::or_<
+    : public boost::mpl::or_<
       is_primitive< head >,
       at_least_one_operand_is_primitive< tail... >
     > {};
@@ -118,7 +118,7 @@ namespace softdsp {
 
   template< typename head, typename ...tail >
   struct at_least_one_operand_is_float< head, tail... >
-    : boost::mpl::or_<
+    : public boost::mpl::or_<
       is_float< head >,
       at_least_one_operand_is_float< tail... >
     > {};

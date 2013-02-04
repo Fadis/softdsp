@@ -86,9 +86,9 @@ namespace softdsp {
       llvm::Function *entry_point_
     ) : context( context_ ), builder( builder_ ), engine( engine_ ), entry_point( entry_point_ ) {
     }
-    int operator()( const data_layout::array< int, 5 > &value ) {
+    int operator()( const data_layout::array< int, 2 > &value, const softdsp::data_layout::tuple< int, double, int, int > &value2 ) {
       //return reinterpret_cast< typename boost::function_types::function_pointer< boost::function_types::components< function_type > >::type >( engine->getPointerToFunction( entry_point ) )( value );
-      return reinterpret_cast< int(*)( const void* ) >( engine->getPointerToFunction( entry_point ) )( value.get() );
+      return reinterpret_cast< int(*)( const void*, const void* ) >( engine->getPointerToFunction( entry_point ) )( value.get(), value2.get() );
     }
   private:
     const std::shared_ptr< llvm::LLVMContext > context;
@@ -340,21 +340,29 @@ int main() {
   module->setTargetTriple( "x86_64-pc-linux" );
   module->setDataLayout( target_data->getStringRepresentation() );
     softdsp::module sd_module( context, "the_module", target_data->getStringRepresentation() );
-    sd_module.add_function< int ( softdsp::data_layout::array< int, 5 > ) >(
+    sd_module.add_function< int ( softdsp::data_layout::array< int, 2 >, softdsp::data_layout::tuple< int, double, int, int > ) >(
       "woo",
-      (softdsp::_1)[ 0 ]
+      (softdsp::_1)[ 0 ] + softdsp::at_c< 2 >( softdsp::_2 )
     );
     sd_module.dump();
     value_generator vg( context, module->getDataLayout() );
-    auto arg1 = vg( tag< softdsp::data_layout::array< int, 5 > >() );
+    auto arg1 = vg( tag< softdsp::data_layout::array< int, 2 > >() );
     arg1[ 0 ] = 1;
     arg1[ 1 ] = 2;
-    arg1[ 2 ] = 3;
-    std::shared_ptr< softdsp::llvm_toolbox< int ( softdsp::data_layout::array< int, 5 > ) > > tools( new softdsp::llvm_toolbox< int ( softdsp::data_layout::array< int, 5 > ) >( context, "foo" ) );
-    softdsp_context< int ( softdsp::data_layout::array< int, 5 > ) > sd_context( tools );
+    auto arg2 = vg( tag< softdsp::data_layout::tuple< int, double, int, int > >() );
+    boost::fusion::at_c< 0 >( arg2 ) = 4;
+    boost::fusion::at_c< 1 >( arg2 ) = 5.0;
+    boost::fusion::at_c< 2 >( arg2 ) = 8;
+    boost::fusion::at_c< 3 >( arg2 ) = 20;
+    std::cout << boost::fusion::at_c< 0 >( arg2 ) << std::endl;
+    std::cout << boost::fusion::at_c< 1 >( arg2 ) << std::endl;
+    std::cout << boost::fusion::at_c< 2 >( arg2 ) << std::endl;
+    std::cout << boost::fusion::at_c< 3 >( arg2 ) << std::endl;
+    std::shared_ptr< softdsp::llvm_toolbox< int ( softdsp::data_layout::array< int, 2 >, softdsp::data_layout::tuple< int, double, int, int > ) > > tools( new softdsp::llvm_toolbox< int ( softdsp::data_layout::array< int, 2 >, softdsp::data_layout::tuple< int, double, int, int > ) >( context, "foo" ) );
+    softdsp_context< int ( softdsp::data_layout::array< int, 2 >, softdsp::data_layout::tuple< int, double, int, int > ) > sd_context( tools );
     const auto executable = sd_module.compile();
-    auto function = executable.get_function< int ( softdsp::data_layout::array< int, 5 > ) >( "woo" );
-    std::cout << function( arg1 ) << std::endl;
+    auto function = executable.get_function< int ( softdsp::data_layout::array< int, 2 >, softdsp::data_layout::tuple< int, double, int, int > ) >( "woo" );
+    std::cout << function( arg1,arg2 ) << std::endl;
   }
 }
 

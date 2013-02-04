@@ -40,14 +40,15 @@ namespace softdsp {
       const std::shared_ptr< common > &common_resources_,
       const boost::iterator_range< uint8_t* > range_,
       const llvm::StructLayout *struct_layout,
+      size_t size,
       size_t index = 0,
       typename boost::enable_if<
         boost::mpl::not_< typename boost::fusion::result_of::empty< T >::type >
       >::type* = 0
     ) {
       const auto element_range = boost::iterator_range<uint8_t*>(
-        boost::begin( range_ ) + struct_layout->getElementOffset( index ),
-        boost::begin( range_ ) + struct_layout->getElementOffset( index ) +
+        boost::begin( range_ ) + struct_layout->getElementOffset( size - index - 1 ),
+        boost::begin( range_ ) + struct_layout->getElementOffset( size - index - 1 ) +
         common_resources_->layout.getTypeStoreSize(
           common_resources_->type_generator_( tag< typename boost::mpl::back< T >::type >() )
         ) 
@@ -57,6 +58,7 @@ namespace softdsp {
           common_resources_,
           range_,
           struct_layout,
+          size,
           index + 1
         ),
         typename boost::mpl::back< T >::type(
@@ -70,6 +72,7 @@ namespace softdsp {
       const std::shared_ptr< common > &,
       const boost::iterator_range< uint8_t* >&,
       const llvm::StructLayout*,
+      size_t,
       size_t = 0,
       typename boost::enable_if<
         typename boost::fusion::result_of::empty< T >::type
@@ -88,15 +91,13 @@ namespace softdsp {
       );
       return construct_internal_container< T >(
         common_resources_,
-        boost::iterator_range< uint8_t* >(
-          common_resources_->data.data(),
-          common_resources_->data.data() + common_resources_->data.size() 
-        ),
+        common_resources_->root,
         common_resources_->layout.getStructLayout(
           common_resources_->type_generator_(
             tag< T >()
           )
-        )
+        ),
+        boost::mpl::size< T >::value
       );
     }
 
@@ -115,7 +116,8 @@ namespace softdsp {
               common_resources_->type_generator_(
                 tag< boost::fusion::vector< Args... > >()
               )
-            )
+            ),
+            boost::mpl::size< boost::mpl::vector< Args... > >::value
           )
         ), head( boost::begin( range_ ) ) {
       }

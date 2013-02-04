@@ -20,6 +20,7 @@
 #include <softdsp/plus.hpp>
 #include <softdsp/minus.hpp>
 #include <softdsp/subscript.hpp>
+#include <softdsp/at.hpp>
 #include <softdsp/context_definitions.hpp>
 
 #include <llvm/ADT/ArrayRef.h>
@@ -126,13 +127,15 @@ SOFTDSP_ENABLE_BINARY_OPERATOR_( subscript )
   > { \
     typedef decltype( \
       std::declval< \
-        decltype( proto::eval( boost::proto::left( std::declval< Expr >() ), std::declval< context_type >() ) ) \
+        typename decltype( proto::eval( boost::proto::left( std::declval< Expr >() ), std::declval< context_type >() ) ):: \
+          template eval< context_type > \
       >()( \
         BOOST_PP_ENUM( BOOST_PP_DEC( arg_num ), SOFTDSP_CONTEXT_FUNCTION_ARGUMENTS_DECLTYPE, ) \
       ) \
     ) result_type; \
     result_type operator()( Expr &expr, context_type &context ) { \
-      decltype( proto::eval( boost::proto::left( expr ), context ) ) function( context ); \
+      typedef decltype( proto::eval( boost::proto::left( expr ), context ) ) tag; \
+      typename tag:: template eval< context_type > function( context ); \
       return function( \
         BOOST_PP_ENUM( BOOST_PP_DEC( arg_num ), SOFTDSP_CONTEXT_FUNCTION_ARGUMENTS, ) \
       );\
