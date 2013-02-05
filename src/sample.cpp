@@ -165,8 +165,6 @@ namespace softdsp {
       softdsp_context< function_type > context( tools );
       llvm_module->getFunctionList().push_back( tools->llvm_function );
       const auto result = boost::proto::eval( expr, context );
-      int status;
-      std::cout << abi::__cxa_demangle( typeid( result ).name(), 0, 0, &status ) << std::endl;
       result.value->getType()->dump();
       tools->ir_builder.CreateRet(
         tools->as_llvm_value(
@@ -338,14 +336,13 @@ int main() {
     std::cout << "unable to create target machine." << std::endl;
   }
   const auto foo = proto::lit( 10 ) + 0;
-  boost::proto::display_expr( softdsp::static_cast_< int >( proto::lit( 10 ) + 0 ) );
   const llvm::DataLayout *target_data = target_machine->getDataLayout();
   module->setTargetTriple( "x86_64-pc-linux" );
   module->setDataLayout( target_data->getStringRepresentation() );
     softdsp::module sd_module( context, "the_module", target_data->getStringRepresentation() );
     sd_module.add_function< int ( softdsp::data_layout::array< int, 2 >, softdsp::data_layout::tuple< int, double, int, int > ) >(
       "woo",
-      softdsp::static_cast_< int32_t >( softdsp::static_cast_< uint64_t >( (softdsp::_1)[ 0 ] ) + softdsp::static_cast_< uint64_t >( softdsp::at_c< 2 >( softdsp::_2 ) ) )
+      softdsp::static_cast_< int32_t >( softdsp::static_cast_< float >( (softdsp::_1)[ 0 ] ) + softdsp::static_cast_< float >( softdsp::at_c< 2 >( softdsp::_2 ) ) )
     );
     sd_module.dump();
     value_generator vg( context, module->getDataLayout() );
@@ -357,10 +354,6 @@ int main() {
     boost::fusion::at_c< 1 >( arg2 ) = 5.0;
     boost::fusion::at_c< 2 >( arg2 ) = 8;
     boost::fusion::at_c< 3 >( arg2 ) = 20;
-    std::cout << boost::fusion::at_c< 0 >( arg2 ) << std::endl;
-    std::cout << boost::fusion::at_c< 1 >( arg2 ) << std::endl;
-    std::cout << boost::fusion::at_c< 2 >( arg2 ) << std::endl;
-    std::cout << boost::fusion::at_c< 3 >( arg2 ) << std::endl;
     std::shared_ptr< softdsp::llvm_toolbox< int ( softdsp::data_layout::array< int, 2 >, softdsp::data_layout::tuple< int, double, int, int > ) > > tools( new softdsp::llvm_toolbox< int ( softdsp::data_layout::array< int, 2 >, softdsp::data_layout::tuple< int, double, int, int > ) >( context, "foo" ) );
     softdsp_context< int ( softdsp::data_layout::array< int, 2 >, softdsp::data_layout::tuple< int, double, int, int > ) > sd_context( tools );
     const auto executable = sd_module.compile();

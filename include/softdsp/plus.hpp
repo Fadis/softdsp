@@ -79,7 +79,10 @@ namespace softdsp {
         typename boost::enable_if<
           boost::mpl::and_<
             at_least_one_operand_is_llvm_value< LeftType, RightType >,
-            at_least_one_operand_is_float< LeftType, RightType >
+            at_least_one_operand_is_float<
+              typename get_return_type< LeftType >::type,
+              typename get_return_type< RightType >::type
+            >
           >
         >::type* = 0
       ) -> return_value<
@@ -107,7 +110,12 @@ namespace softdsp {
         typename boost::enable_if<
           boost::mpl::and_<
             at_least_one_operand_is_llvm_value< LeftType, RightType >,
-            boost::mpl::not_< at_least_one_operand_is_float< LeftType, RightType > >
+            boost::mpl::not_<
+              at_least_one_operand_is_float<
+                typename get_return_type< LeftType >::type,
+                typename get_return_type< RightType >::type
+              >
+            >
           >
         >::type* = 0
       ) -> return_value<

@@ -145,6 +145,74 @@ namespace softdsp {
               tools->type_generator_( tag< To_ >() )
             );
         }
+        template< typename From, typename To_ >
+        llvm::Value *cast(
+          llvm::Value *src,
+          typename boost::enable_if<
+            boost::mpl::and_<
+              boost::is_float< From >,
+              boost::is_integral< To_ >,
+              boost::mpl::not_< boost::is_signed< To_ > >
+            >
+          >::type* = 0
+        ) {
+          return
+            tools->ir_builder.CreateFPToUI(
+              src,
+              tools->type_generator_( tag< To_ >() )
+            );
+        }
+        template< typename From, typename To_ >
+        llvm::Value *cast(
+          llvm::Value *src,
+          typename boost::enable_if<
+            boost::mpl::and_<
+              boost::is_float< From >,
+              boost::is_integral< To_ >,
+              boost::is_signed< To_ >
+            >
+          >::type* = 0
+        ) {
+          return
+            tools->ir_builder.CreateFPToSI(
+              src,
+              tools->type_generator_( tag< To_ >() )
+            );
+        }
+        template< typename From, typename To_ >
+        llvm::Value *cast(
+          llvm::Value *src,
+          typename boost::enable_if<
+            boost::mpl::and_<
+              boost::is_integral< From >,
+              boost::mpl::not_< boost::is_signed< From > >,
+              boost::is_float< To_ >
+            >
+          >::type* = 0
+        ) {
+          return
+            tools->ir_builder.CreateUIToFP(
+              src,
+              tools->type_generator_( tag< To_ >() )
+            );
+        }
+        template< typename From, typename To_ >
+        llvm::Value *cast(
+          llvm::Value *src,
+          typename boost::enable_if<
+            boost::mpl::and_<
+              boost::is_integral< From >,
+              boost::is_signed< From >,
+              boost::is_float< To_ >
+            >
+          >::type* = 0
+        ) {
+          return
+            tools->ir_builder.CreateSIToFP(
+              src,
+              tools->type_generator_( tag< To_ >() )
+            );
+        }
         const typename Context::toolbox_type tools;
       };
     };
