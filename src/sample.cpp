@@ -14,6 +14,7 @@
 #include <softdsp/placeholders.hpp>
 #include <softdsp/llvm_toolbox.hpp>
 #include <softdsp/context.hpp>
+#include <softdsp/static_cast.hpp>
 
 #include <llvm/ADT/ArrayRef.h>
 #include <llvm/LLVMContext.h>
@@ -336,13 +337,15 @@ int main() {
   if( !target_machine ) {
     std::cout << "unable to create target machine." << std::endl;
   }
+  const auto foo = proto::lit( 10 ) + 0;
+  boost::proto::display_expr( softdsp::static_cast_< int >( proto::lit( 10 ) + 0 ) );
   const llvm::DataLayout *target_data = target_machine->getDataLayout();
   module->setTargetTriple( "x86_64-pc-linux" );
   module->setDataLayout( target_data->getStringRepresentation() );
     softdsp::module sd_module( context, "the_module", target_data->getStringRepresentation() );
     sd_module.add_function< int ( softdsp::data_layout::array< int, 2 >, softdsp::data_layout::tuple< int, double, int, int > ) >(
       "woo",
-      (softdsp::_1)[ 0 ] + softdsp::at_c< 2 >( softdsp::_2 )
+      softdsp::static_cast_< int32_t >( softdsp::static_cast_< uint64_t >( (softdsp::_1)[ 0 ] ) + softdsp::static_cast_< uint64_t >( softdsp::at_c< 2 >( softdsp::_2 ) ) )
     );
     sd_module.dump();
     value_generator vg( context, module->getDataLayout() );

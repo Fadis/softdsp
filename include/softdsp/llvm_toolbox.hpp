@@ -17,6 +17,7 @@
 #include <llvm/Target/TargetOptions.h>
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/Support/TargetRegistry.h>
+#include <iostream>
 #include <memory>
 #include <vector>
 #include <string>

@@ -82,11 +82,13 @@ namespace softdsp {
         eval( const Context &context_ ) : tools( context_.get_toolbox() ) {}
         template< typename ValueType >
         return_value<
-          typename boost::mpl::at<
-            typename boost::remove_reference<
-              typename get_return_type< ValueType >::type
-            >::type,
-            Index
+          typename remove_proxy<
+            typename boost::mpl::at<
+              typename boost::remove_reference<
+                typename get_return_type< ValueType >::type
+              >::type,
+              Index
+            >::type
           >::type
         >
         operator()(
@@ -110,13 +112,14 @@ namespace softdsp {
           const auto value = tools->as_llvm_value( tools->load( value_ ) );
           std::vector< unsigned int > args = { static_cast< unsigned int >( Index::value ) };
           llvm::ArrayRef< unsigned int > args_ref( args );
-          std::cout << "debug1: " << Index::value << std::endl;
           return return_value<
-            typename boost::mpl::at<
-              typename boost::remove_reference<
-                typename get_return_type< ValueType >::type
-              >::type,
-              Index
+            typename remove_proxy<
+              typename boost::mpl::at<
+                typename boost::remove_reference<
+                  typename get_return_type< ValueType >::type
+                >::type,
+                Index
+              >::type
             >::type
           >(
             tools->ir_builder.CreateExtractValue( value.value, args_ref )
@@ -124,11 +127,13 @@ namespace softdsp {
         }
         template< typename ValueType >
         return_value<
-          typename boost::mpl::at<
-            typename boost::remove_reference<
-              typename get_return_type< ValueType >::type
-            >::type,
-            Index
+          typename remove_proxy<
+            typename boost::mpl::at<
+              typename boost::remove_reference<
+                typename get_return_type< ValueType >::type
+              >::type,
+              Index
+            >::type
           >::type&
         >
         operator()(
@@ -148,13 +153,14 @@ namespace softdsp {
           >::type* = 0
         ) {
           const auto value = tools->as_llvm_value( value_ );
-          std::cout << "debug2: " << Index::value << std::endl;
           return return_value<
-            typename boost::mpl::at<
-              typename boost::remove_reference<
-                typename get_return_type< ValueType >::type
-              >::type,
-              Index
+            typename remove_proxy<
+              typename boost::mpl::at<
+                typename boost::remove_reference<
+                  typename get_return_type< ValueType >::type
+                >::type,
+                Index
+              >::type
             >::type&
           >(
             tools->ir_builder.CreateStructGEP( value.value, Index::value )
@@ -173,7 +179,9 @@ namespace softdsp {
               >
             >
           >::type* = 0
-        ) -> typename softdsp::mpl::at< ValueType, Index >::type {
+        ) -> typename remove_proxy<
+          typename softdsp::mpl::at< ValueType, Index >::type 
+        >::type {
           return boost::fusion::at< Index >( value_ );
         }
       private:
@@ -183,13 +191,13 @@ namespace softdsp {
   }
   
   template< typename Index, typename Expr >
-  auto at( Expr expr )
+  auto at( const Expr &expr )
   -> decltype( std::declval< typename boost::proto::terminal< keywords::at< Index > >::type >()( expr ) ) {
     typename boost::proto::terminal< keywords::at< Index > >::type at_;
     return at_( expr );
   }
   template< size_t index, typename Expr >
-  auto at_c( Expr expr )
+  auto at_c( const Expr &expr )
   -> decltype( std::declval< typename boost::proto::terminal< keywords::at< boost::mpl::size_t< index > > >::type >()( expr ) ) {
     typename boost::proto::terminal< keywords::at< boost::mpl::size_t< index > > >::type at_;
     return at_( expr );

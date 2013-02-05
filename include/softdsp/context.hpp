@@ -21,6 +21,7 @@
 #include <softdsp/minus.hpp>
 #include <softdsp/subscript.hpp>
 #include <softdsp/at.hpp>
+#include <softdsp/static_cast.hpp>
 #include <softdsp/context_definitions.hpp>
 
 #include <llvm/ADT/ArrayRef.h>
