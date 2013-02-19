@@ -19,6 +19,7 @@
 #include <softdsp/dereference.hpp>
 #include <softdsp/plus.hpp>
 #include <softdsp/minus.hpp>
+#include <softdsp/multiplies.hpp>
 #include <softdsp/context_definitions.hpp>
 
 #include <llvm/ADT/ArrayRef.h>
@@ -97,17 +98,20 @@ namespace softdsp {
               >::type
             >,
             is_primitive<
-              typename hermit::range_value<
-                typename boost::remove_reference<
-                  typename get_return_type< LeftType >::type
+              typename boost::remove_reference<
+                typename hermit::range_value<
+                  typename boost::remove_reference<
+                    typename get_return_type< LeftType >::type
+                  >::type
                 >::type
               >::type
             >
           >
         >::type* = 0
       ) {
+        typename static_cast_< int >::template eval< Context > cast( tools );
         const auto left = tools->as_llvm_value( tools->load( left_ ) );
-        const auto right = tools->as_llvm_value( tools->load( right_ ) );
+        const auto right = cast( tools->as_llvm_value( tools->load( right_ ) ) );
         return return_value<
           typename hermit::range_value<
             typename boost::remove_reference<
@@ -139,19 +143,22 @@ namespace softdsp {
             >,
             boost::mpl::not_<
               is_primitive<
-                typename hermit::range_value<
-                  typename boost::remove_reference<
-                    typename get_return_type< LeftType >::type
+                typename boost::remove_reference<
+                  typename hermit::range_value<
+                    typename boost::remove_reference<
+                      typename get_return_type< LeftType >::type
+                    >::type
                   >::type
                 >::type
               >
-            >
+            >,
+            boost::mpl::not_< boost::is_reference< typename get_return_type< LeftType >::type > >
           >
         >::type* = 0
       ) {
         const auto left = tools->as_llvm_value( tools->load( left_ ) );
-        std::vector< unsigned int > args = { static_cast< unsigned int >( right_ ) };
-        llvm::ArrayRef< unsigned int > args_ref( args );
+        std::vector< int > args = { static_cast< int >( right_ ) };
+        llvm::ArrayRef< int > args_ref( args );
         return return_value<
           typename hermit::range_value<
             typename boost::remove_reference<
@@ -164,11 +171,107 @@ namespace softdsp {
       }
       template< typename LeftType, typename RightType >
       return_value<
+        typename hermit::range_value<
+          typename boost::remove_reference<
+            typename get_return_type< LeftType >::type
+          >::type
+        >::type&
+      >
+      operator()(
+        LeftType left_,
+        RightType right_,
+        typename boost::enable_if<
+          boost::mpl::and_<
+            at_least_one_operand_is_llvm_value< LeftType, RightType >,
+            hermit::is_forward_traversal_range<
+              typename boost::remove_reference<
+                typename get_return_type< LeftType >::type
+              >::type
+            >,
+            boost::mpl::not_<
+              is_primitive<
+                typename boost::remove_reference<
+                  typename hermit::range_value<
+                    typename boost::remove_reference<
+                      typename get_return_type< LeftType >::type
+                    >::type
+                  >::type
+                >::type
+              >
+            >,
+            boost::is_reference< typename get_return_type< LeftType >::type >
+          >
+        >::type* = 0
+      ) {
+        typename static_cast_< int >::template eval< Context > cast( tools );
+        const auto right = cast( tools->as_llvm_value( tools->load( right_ ) ) );
+        left_.value->getType()->dump();std::cout << std::endl;
+        right.value->getType()->dump();std::cout << std::endl;
+        llvm::Value *indices[] = {
+          cast( tools->as_llvm_value( 0u ) ).value,
+          cast( tools->as_llvm_value( tools->load( right_ ) ) ).value
+        };
+        return return_value<
+          typename hermit::range_value<
+            typename boost::remove_reference<
+              typename get_return_type< LeftType >::type
+            >::type
+          >::type&
+        >(
+          tools->ir_builder.CreateInBoundsGEP( left_.value, indices )
+        );
+      }
+      /*template< typename LeftType, typename RightType >
+      return_value<
+        typename hermit::range_value<
+          typename boost::remove_reference<
+            typename get_return_type< LeftType >::type
+          >::type
+        >::type&
+      >
+      operator()(
+        LeftType left_,
+        RightType right_,
+        typename boost::enable_if<
+          boost::mpl::and_<
+            at_least_one_operand_is_llvm_value< LeftType >,
+            hermit::is_forward_traversal_range<
+              typename boost::remove_reference<
+                typename get_return_type< LeftType >::type
+              >::type
+            >,
+            boost::mpl::not_<
+              is_primitive<
+                typename hermit::range_value<
+                  typename boost::remove_reference<
+                    typename get_return_type< LeftType >::type
+                  >::type
+                >::type
+              >
+            >,
+            boost::is_reference< typename get_return_type< LeftType >::type >
+          >
+        >::type* = 0
+      ) {
+        typename static_cast_< int >::template eval< Context > cast( tools );
+        const auto right = cast( tools->as_llvm_value( tools->load( right_ ) ) );
+        return return_value<
+          typename hermit::range_value<
+            typename boost::remove_reference<
+              typename get_return_type< LeftType >::type
+            >::type
+          >::type&
+        >(
+          tools->ir_builder.CreateInBoundsGEP( left_.value, right.value )
+        );
+      }*/
+      template< typename LeftType, typename RightType >
+      return_value<
         typename boost::remove_pointer<
           typename boost::remove_reference<
             typename get_return_type< LeftType >::type
           >::type
-        >::type
+        >::type&
       >
       operator()(
         LeftType left_, RightType right_,
@@ -183,31 +286,27 @@ namespace softdsp {
           >
         >::type* = 0
       ) {
+        typename static_cast_< int >::template eval< Context > cast( tools );
+        multiplies< Context > mul( tools );
         const auto left = tools->as_llvm_value( tools->load( left_ ) );
-        const auto right = tools->as_llvm_value( tools->load( right_ ) );
-        if( left.value->getType()->isPointerTy() ) {
-          return return_value<
-            typename boost::remove_pointer<
-              typename boost::remove_reference<
-                typename get_return_type< LeftType >::type
-              >::type
+        const auto right = cast( tools->as_llvm_value( tools->load( right_ ) ) );
+        return return_value<
+          typename boost::remove_pointer<
+            typename boost::remove_reference<
+              typename get_return_type< LeftType >::type
             >::type
-          >(
-            tools->ir_builder.CreateLoad(
-              tools->ir_builder.CreateAdd(
-                left.value,
-                mul(
-                  right.value,
-                  tools->data_layout->getTypeAlllocSize(
-                    left.value->getType()
-                  )
-                )
+          >::type&
+        >(
+          tools->ir_builder.CreateAdd(
+            left.value,
+            mul(
+              right.value,
+              tools->data_layout->getTypeAlllocSize(
+                left.value->getType()
               )
             )
-          );
-        }
-        else
-          throw -1;
+          )
+        );
       }
       template< typename LeftType, typename RightType >
       typename hermit::range_value<
@@ -250,47 +349,6 @@ namespace softdsp {
       ) -> decltype( left_[ right_ ] ) {
         return left_[ right_ ];
       }
-
-   /* 
-      template< typename LeftType, typename RightType >
-      return_value<
-        typename hermit::range_value<
-          typename boost::remove_reference<
-            typename get_return_type< LeftType >::type
-          >::type
-        >::type&
-      >
-      operator()(
-        LeftType left_,
-        RightType right_,
-        typename boost::enable_if<
-          boost::mpl::and_<
-            at_least_one_operand_is_llvm_value< LeftType, RightType >,
-            hermit::is_forward_traversal_range<
-              typename boost::remove_reference<
-                typename get_return_type< LeftType >::type
-              >
-            >,
-            boost::is_reference< typename get_return_type< LeftType >::type >
-          >
-        >::type* = 0
-      ) {
-        const auto left = tools->as_llvm_value( tools->load( left_ ) );
-        const auto right = tools->as_llvm_value( tools->load( right_ ) );
-        int status;
-        std::cout << abi::__cxa_demangle( typeid( left ).name(), 0, 0, &status ) << std::endl;
-        left.value->getType()->dump();
-        return return_value<
-          typename hermit::range_value<
-            typename boost::remove_reference<
-              typename get_return_type< LeftType >::type
-            >::type
-          >::type&
-        >(
-          tools->ir_builder.CreateGEP( left.value, right.value )
-        );
-      }
-      */
     private:
       const typename Context::toolbox_type tools;
     };

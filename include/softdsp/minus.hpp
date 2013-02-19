@@ -60,6 +60,7 @@
 
 #include <hermit/range_traits.hpp>
 #include <softdsp/static_range_size.hpp>
+#include <softdsp/static_cast.hpp>
 
 #include <cxxabi.h>
 
@@ -79,7 +80,10 @@ namespace softdsp {
         typename boost::enable_if<
           boost::mpl::and_<
             at_least_one_operand_is_llvm_value< LeftType, RightType >,
-            at_least_one_operand_is_float< LeftType, RightType >
+            at_least_one_operand_is_float<
+              typename get_return_type< LeftType >::type,
+              typename get_return_type< RightType >::type
+            >
           >
         >::type* = 0
       ) -> return_value<
@@ -88,17 +92,17 @@ namespace softdsp {
           std::declval< typename get_return_type< RightType >::type >()
         )
       > {
-        const auto left = tools->as_llvm_value( tools->load( left_ ) );
-        const auto right = tools->as_llvm_value( tools->load( right_ ) );
-        // need implicit cast
+        typedef decltype(
+          std::declval< typename get_return_type< LeftType >::type >() -
+          std::declval< typename get_return_type< RightType >::type >()
+        ) result_type;
+        typename static_cast_< result_type >::template eval< Context > cast( tools );
+        const auto left = cast( tools->as_llvm_value( tools->load( left_ ) ) );
+        const auto right = cast( tools->as_llvm_value( tools->load( right_ ) ) );
+        
         return
-          return_value<
-            decltype(
-              std::declval< typename get_return_type< LeftType >::type >() -
-              std::declval< typename get_return_type< RightType >::type >()
-            )
-          >(
-            tools->ir_builder.CreateFAdd( left.value, right.value )
+          return_value< result_type >(
+            tools->ir_builder.CreateFSub( left.value, right.value )
           );
       }
       template< typename LeftType, typename RightType >
@@ -107,7 +111,12 @@ namespace softdsp {
         typename boost::enable_if<
           boost::mpl::and_<
             at_least_one_operand_is_llvm_value< LeftType, RightType >,
-            boost::mpl::not_< at_least_one_operand_is_float< LeftType, RightType > >
+            boost::mpl::not_<
+              at_least_one_operand_is_float<
+                typename get_return_type< LeftType >::type,
+                typename get_return_type< RightType >::type
+              >
+            >
           >
         >::type* = 0
       ) -> return_value<
@@ -116,17 +125,16 @@ namespace softdsp {
           std::declval< typename get_return_type< RightType >::type >()
         )
       > {
-        const auto left = tools->as_llvm_value( tools->load( left_ ) );
-        const auto right = tools->as_llvm_value( tools->load( right_ ) );
-        // need implicit cast
+        typedef decltype(
+          std::declval< typename get_return_type< LeftType >::type >() -
+          std::declval< typename get_return_type< RightType >::type >()
+        ) result_type;
+        typename static_cast_< result_type >::template eval< Context > cast( tools );
+        const auto left = cast( tools->as_llvm_value( tools->load( left_ ) ) );
+        const auto right = cast( tools->as_llvm_value( tools->load( right_ ) ) );
         return
-          return_value<
-            decltype(
-              std::declval< typename get_return_type< LeftType >::type >() -
-              std::declval< typename get_return_type< RightType >::type >()
-            )
-          >(
-            tools->ir_builder.CreateAdd( left.value, right.value )
+          return_value< result_type >(
+            tools->ir_builder.CreateSub( left.value, right.value )
           );
       }
       template< typename LeftType, typename RightType >
@@ -135,8 +143,8 @@ namespace softdsp {
         typename boost::disable_if<
           at_least_one_operand_is_llvm_value< LeftType, RightType >
         >::type* = 0
-      ) -> decltype( left_ - right_ ) {
-        return left_ - right_;
+      ) -> decltype( left_ + right_ ) {
+        return left_ + right_;
       }
     private:
       const typename Context::toolbox_type tools;

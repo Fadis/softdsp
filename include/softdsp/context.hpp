@@ -17,11 +17,16 @@
 #include <softdsp/llvm_toolbox.hpp>
 #include <softdsp/return_value.hpp>
 #include <softdsp/dereference.hpp>
-#include <softdsp/plus.hpp>
 #include <softdsp/minus.hpp>
+#include <softdsp/plus.hpp>
 #include <softdsp/subscript.hpp>
+#include <softdsp/unary_plus.hpp>
+#include <softdsp/negate.hpp>
+#include <softdsp/complement.hpp>
 #include <softdsp/at.hpp>
 #include <softdsp/static_cast.hpp>
+#include <softdsp/multiplies.hpp>
+#include <softdsp/divides.hpp>
 #include <softdsp/context_definitions.hpp>
 
 #include <llvm/ADT/ArrayRef.h>
@@ -99,8 +104,13 @@ namespace softdsp {
     };
 
 SOFTDSP_ENABLE_UNARY_OPERATOR_( dereference )
+SOFTDSP_ENABLE_UNARY_OPERATOR_( unary_plus )
+SOFTDSP_ENABLE_UNARY_OPERATOR_( negate )
+SOFTDSP_ENABLE_UNARY_OPERATOR_( complement )
 SOFTDSP_ENABLE_BINARY_OPERATOR_( plus )
 SOFTDSP_ENABLE_BINARY_OPERATOR_( minus )
+SOFTDSP_ENABLE_BINARY_OPERATOR_( multiplies )
+SOFTDSP_ENABLE_BINARY_OPERATOR_( divides )
 SOFTDSP_ENABLE_BINARY_OPERATOR_( subscript )
 
 #define SOFTDSP_CONTEXT_FUNCTION_PROTO_( z, index, unused ) \

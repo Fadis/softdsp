@@ -1,5 +1,5 @@
-#ifndef SOFTDSP_PLUS_HPP
-#define SOFTDSP_PLUS_HPP
+#ifndef SOFTDSP_DIVIDES_HPP
+#define SOFTDSP_DIVIDES_HPP
 
 #include <softdsp/primitive.hpp>
 #include <softdsp/constant_generator.hpp>
@@ -71,70 +71,97 @@ namespace softdsp {
 
   namespace keywords {
     template< typename Context >
-    class plus {
+    class divides {
     public:
-      plus( const Context &context_ ) : tools( context_.get_toolbox() ) {}
+      divides( const Context &context_ ) : tools( context_.get_toolbox() ) {}
+      divides( const typename Context::toolbox_type &tools_ ) : tools( tools_ ) {}
       template< typename LeftType, typename RightType >
-      auto operator()(
+      struct result_type {
+        typedef
+          decltype(
+            std::declval< typename get_return_type< LeftType >::type >() /
+            std::declval< typename get_return_type< RightType >::type >()
+          ) type;
+      };
+      template< typename LeftType, typename RightType >
+      return_value< typename result_type< LeftType, RightType >::type >
+      operator()(
         LeftType left_, RightType right_,
         typename boost::enable_if<
           boost::mpl::and_<
             at_least_one_operand_is_llvm_value< LeftType, RightType >,
-            at_least_one_operand_is_float<
-              typename get_return_type< LeftType >::type,
-              typename get_return_type< RightType >::type
+            boost::is_float<
+              typename result_type< LeftType, RightType >::type
             >
           >
         >::type* = 0
-      ) -> return_value<
-        decltype(
-          std::declval< typename get_return_type< LeftType >::type >() +
-          std::declval< typename get_return_type< RightType >::type >()
-        )
-      > {
-        typedef decltype(
-          std::declval< typename get_return_type< LeftType >::type >() +
-          std::declval< typename get_return_type< RightType >::type >()
-        ) result_type;
-        typename static_cast_< result_type >::template eval< Context > cast( tools );
+      ) {
+        typename static_cast_<
+          typename result_type< LeftType, RightType >::type
+        >::template eval< Context > cast( tools );
         const auto left = cast( tools->as_llvm_value( tools->load( left_ ) ) );
         const auto right = cast( tools->as_llvm_value( tools->load( right_ ) ) );
-        
         return
-          return_value< result_type >(
-            tools->ir_builder.CreateFAdd( left.value, right.value )
+          return_value< typename result_type< LeftType, RightType >::type >(
+            tools->ir_builder.CreateFDiv( left.value, right.value )
           );
       }
       template< typename LeftType, typename RightType >
-      auto operator()(
+      return_value< typename result_type< LeftType, RightType >::type >
+      operator()(
         LeftType left_, RightType right_,
         typename boost::enable_if<
           boost::mpl::and_<
             at_least_one_operand_is_llvm_value< LeftType, RightType >,
             boost::mpl::not_<
-              at_least_one_operand_is_float<
-                typename get_return_type< LeftType >::type,
-                typename get_return_type< RightType >::type
+              boost::is_float<
+                typename result_type< LeftType, RightType >::type
+              >
+            >,
+            boost::is_signed<
+              typename result_type< LeftType, RightType >::type
+            >
+          >
+        >::type* = 0
+      ) {
+        typename static_cast_<
+          typename result_type< LeftType, RightType >::type
+        >::template eval< Context > cast( tools );
+        const auto left = cast( tools->as_llvm_value( tools->load( left_ ) ) );
+        const auto right = cast( tools->as_llvm_value( tools->load( right_ ) ) );
+        return
+          return_value< typename result_type< LeftType, RightType >::type >(
+            tools->ir_builder.CreateSDiv( left.value, right.value )
+          );
+      }
+      template< typename LeftType, typename RightType >
+      return_value< typename result_type< LeftType, RightType >::type >
+      operator()(
+        LeftType left_, RightType right_,
+        typename boost::enable_if<
+          boost::mpl::and_<
+            at_least_one_operand_is_llvm_value< LeftType, RightType >,
+            boost::mpl::not_<
+              boost::is_float<
+                typename result_type< LeftType, RightType >::type
+              >
+            >,
+            boost::mpl::not_<
+              boost::is_signed<
+                typename result_type< LeftType, RightType >::type
               >
             >
           >
         >::type* = 0
-      ) -> return_value<
-        decltype(
-          std::declval< typename get_return_type< LeftType >::type >() +
-          std::declval< typename get_return_type< RightType >::type >()
-        )
-      > {
-        typedef decltype(
-          std::declval< typename get_return_type< LeftType >::type >() +
-          std::declval< typename get_return_type< RightType >::type >()
-        ) result_type;
-        typename static_cast_< result_type >::template eval< Context > cast( tools );
+      ) {
+        typename static_cast_<
+          typename result_type< LeftType, RightType >::type
+        >::template eval< Context > cast( tools );
         const auto left = cast( tools->as_llvm_value( tools->load( left_ ) ) );
         const auto right = cast( tools->as_llvm_value( tools->load( right_ ) ) );
         return
-          return_value< result_type >(
-            tools->ir_builder.CreateAdd( left.value, right.value )
+          return_value< typename result_type< LeftType, RightType >::type >(
+            tools->ir_builder.CreateUDiv( left.value, right.value )
           );
       }
       template< typename LeftType, typename RightType >
@@ -143,8 +170,8 @@ namespace softdsp {
         typename boost::disable_if<
           at_least_one_operand_is_llvm_value< LeftType, RightType >
         >::type* = 0
-      ) -> decltype( left_ + right_ ) {
-        return left_ + right_;
+      ) -> decltype( left_ / right_ ) {
+        return left_ / right_;
       }
     private:
       const typename Context::toolbox_type tools;

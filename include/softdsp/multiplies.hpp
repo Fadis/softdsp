@@ -1,5 +1,5 @@
-#ifndef SOFTDSP_PLUS_HPP
-#define SOFTDSP_PLUS_HPP
+#ifndef SOFTDSP_MULTIPLIES_HPP
+#define SOFTDSP_MULTIPLIES_HPP
 
 #include <softdsp/primitive.hpp>
 #include <softdsp/constant_generator.hpp>
@@ -71,9 +71,10 @@ namespace softdsp {
 
   namespace keywords {
     template< typename Context >
-    class plus {
+    class multiplies {
     public:
-      plus( const Context &context_ ) : tools( context_.get_toolbox() ) {}
+      multiplies( const Context &context_ ) : tools( context_.get_toolbox() ) {}
+      multiplies( const typename Context::toolbox_type &tools_ ) : tools( tools_ ) {}
       template< typename LeftType, typename RightType >
       auto operator()(
         LeftType left_, RightType right_,
@@ -88,12 +89,12 @@ namespace softdsp {
         >::type* = 0
       ) -> return_value<
         decltype(
-          std::declval< typename get_return_type< LeftType >::type >() +
+          std::declval< typename get_return_type< LeftType >::type >() *
           std::declval< typename get_return_type< RightType >::type >()
         )
       > {
         typedef decltype(
-          std::declval< typename get_return_type< LeftType >::type >() +
+          std::declval< typename get_return_type< LeftType >::type >() *
           std::declval< typename get_return_type< RightType >::type >()
         ) result_type;
         typename static_cast_< result_type >::template eval< Context > cast( tools );
@@ -102,7 +103,7 @@ namespace softdsp {
         
         return
           return_value< result_type >(
-            tools->ir_builder.CreateFAdd( left.value, right.value )
+            tools->ir_builder.CreateFMul( left.value, right.value )
           );
       }
       template< typename LeftType, typename RightType >
@@ -121,12 +122,12 @@ namespace softdsp {
         >::type* = 0
       ) -> return_value<
         decltype(
-          std::declval< typename get_return_type< LeftType >::type >() +
+          std::declval< typename get_return_type< LeftType >::type >() *
           std::declval< typename get_return_type< RightType >::type >()
         )
       > {
         typedef decltype(
-          std::declval< typename get_return_type< LeftType >::type >() +
+          std::declval< typename get_return_type< LeftType >::type >() *
           std::declval< typename get_return_type< RightType >::type >()
         ) result_type;
         typename static_cast_< result_type >::template eval< Context > cast( tools );
@@ -134,7 +135,7 @@ namespace softdsp {
         const auto right = cast( tools->as_llvm_value( tools->load( right_ ) ) );
         return
           return_value< result_type >(
-            tools->ir_builder.CreateAdd( left.value, right.value )
+            tools->ir_builder.CreateMul( left.value, right.value )
           );
       }
       template< typename LeftType, typename RightType >
@@ -143,8 +144,8 @@ namespace softdsp {
         typename boost::disable_if<
           at_least_one_operand_is_llvm_value< LeftType, RightType >
         >::type* = 0
-      ) -> decltype( left_ + right_ ) {
-        return left_ + right_;
+      ) -> decltype( left_ * right_ ) {
+        return left_ * right_;
       }
     private:
       const typename Context::toolbox_type tools;

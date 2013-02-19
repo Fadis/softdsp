@@ -17,8 +17,6 @@
 #include <softdsp/llvm_toolbox.hpp>
 #include <softdsp/return_value.hpp>
 #include <softdsp/dereference.hpp>
-#include <softdsp/plus.hpp>
-#include <softdsp/minus.hpp>
 #include <softdsp/context_definitions.hpp>
 #include <softdsp/mpl.hpp>
 
@@ -80,6 +78,7 @@ namespace softdsp {
       class eval {
       public:
         eval( const Context &context_ ) : tools( context_.get_toolbox() ) {}
+        eval( const typename Context::toolbox_type &tools_ ) : tools( tools_ ) {}
         template< typename ValueType >
         return_value< typename boost::remove_reference< To >::type >
         operator()(
@@ -91,8 +90,8 @@ namespace softdsp {
           const auto value = tools->as_llvm_value( tools->load( value_ ) );
           return return_value< typename boost::remove_reference< To >::type >(
             cast<
-              typename boost::remove_reference< 
-                typename remove_proxy< 
+              typename remove_proxy< 
+                typename boost::remove_reference< 
                   typename get_return_type< ValueType >::type
                 >::type
               >::type,
@@ -207,6 +206,9 @@ namespace softdsp {
             >
           >::type* = 0
         ) {
+          std::cout << "debug:::" << std::endl;
+          src->getType()->dump();
+          std::cout << "debug:::" << std::endl;
           return
             tools->ir_builder.CreateSIToFP(
               src,

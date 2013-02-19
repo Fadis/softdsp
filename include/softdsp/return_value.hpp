@@ -4,6 +4,7 @@
 #include <llvm/Value.h>
 
 #include <softdsp/primitive.hpp>
+#include <softdsp/remove_proxy.hpp>
 
 namespace softdsp {
   struct return_value_ {};
@@ -11,7 +12,7 @@ namespace softdsp {
   template< typename T >
   struct return_value : public return_value_ {
     return_value( llvm::Value *value_ ) : value( value_ ) {}
-    llvm::Value *value;
+    llvm::Value * const value;
   };
 
   template< typename T >
@@ -20,6 +21,10 @@ namespace softdsp {
   };
   template< typename T >
   struct get_return_type< return_value< T > > {
+    typedef typename remove_proxy< T >::type type;
+  };
+  template< typename T >
+  struct get_return_type< return_value< T >& > {
     typedef T type;
   };
   
