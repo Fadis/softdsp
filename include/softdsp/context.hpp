@@ -23,6 +23,12 @@
 #include <softdsp/unary_plus.hpp>
 #include <softdsp/negate.hpp>
 #include <softdsp/complement.hpp>
+#include <softdsp/address_of.hpp>
+#include <softdsp/logical_not.hpp>
+#include <softdsp/pre_inc.hpp>
+#include <softdsp/pre_dec.hpp>
+#include <softdsp/post_inc.hpp>
+#include <softdsp/post_dec.hpp>
 #include <softdsp/at.hpp>
 #include <softdsp/static_cast.hpp>
 #include <softdsp/multiplies.hpp>
@@ -107,6 +113,12 @@ SOFTDSP_ENABLE_UNARY_OPERATOR_( dereference )
 SOFTDSP_ENABLE_UNARY_OPERATOR_( unary_plus )
 SOFTDSP_ENABLE_UNARY_OPERATOR_( negate )
 SOFTDSP_ENABLE_UNARY_OPERATOR_( complement )
+SOFTDSP_ENABLE_UNARY_OPERATOR_( address_of )
+SOFTDSP_ENABLE_UNARY_OPERATOR_( logical_not )
+SOFTDSP_ENABLE_UNARY_OPERATOR_( pre_inc )
+SOFTDSP_ENABLE_UNARY_OPERATOR_( pre_dec )
+SOFTDSP_ENABLE_UNARY_OPERATOR_( post_inc )
+SOFTDSP_ENABLE_UNARY_OPERATOR_( post_dec )
 SOFTDSP_ENABLE_BINARY_OPERATOR_( plus )
 SOFTDSP_ENABLE_BINARY_OPERATOR_( minus )
 SOFTDSP_ENABLE_BINARY_OPERATOR_( multiplies )

@@ -90,12 +90,14 @@ namespace softdsp {
           const auto value = tools->as_llvm_value( tools->load( value_ ) );
           return return_value< typename boost::remove_reference< To >::type >(
             cast<
-              typename remove_proxy< 
-                typename boost::remove_reference< 
-                  typename get_return_type< ValueType >::type
+              typename boost::remove_reference< 
+                typename remove_proxy< 
+                  typename boost::remove_reference< 
+                    typename get_return_type< ValueType >::type
+                  >::type
                 >::type
               >::type,
-              typename boost::remove_reference< To>::type
+              typename boost::remove_reference< To >::type
             >( value.value )
           );
         }
@@ -117,7 +119,8 @@ namespace softdsp {
           typename boost::enable_if<
             boost::mpl::and_<
               boost::is_integral< From >,
-              boost::is_integral< To_ >
+              boost::is_integral< To_ >,
+              boost::mpl::not_< boost::is_same< To_, bool > >
             >
           >::type* = 0
         ) {
@@ -151,7 +154,8 @@ namespace softdsp {
             boost::mpl::and_<
               boost::is_float< From >,
               boost::is_integral< To_ >,
-              boost::mpl::not_< boost::is_signed< To_ > >
+              boost::mpl::not_< boost::is_signed< To_ > >,
+              boost::mpl::not_< boost::is_same< To_, bool > >
             >
           >::type* = 0
         ) {
@@ -168,7 +172,8 @@ namespace softdsp {
             boost::mpl::and_<
               boost::is_float< From >,
               boost::is_integral< To_ >,
-              boost::is_signed< To_ >
+              boost::is_signed< To_ >,
+              boost::mpl::not_< boost::is_same< To_, bool > >
             >
           >::type* = 0
         ) {
@@ -213,6 +218,24 @@ namespace softdsp {
             tools->ir_builder.CreateSIToFP(
               src,
               tools->type_generator_( tag< To_ >() )
+            );
+        }
+        template< typename From, typename To_ >
+        llvm::Value *cast(
+          llvm::Value *src,
+          typename boost::enable_if<
+            boost::mpl::and_<
+              boost::is_integral< From >,
+              boost::is_integral< To_ >,
+              boost::is_same< To_, bool >
+            >
+          >::type* = 0
+        ) {
+          return
+            tools->ir_builder.CreateIntCast(
+              src,
+              tools->type_generator_( tag< To_ >() ),
+              boost::is_signed< From >::value
             );
         }
         const typename Context::toolbox_type tools;
