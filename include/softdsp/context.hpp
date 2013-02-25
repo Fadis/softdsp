@@ -29,6 +29,12 @@
 #include <softdsp/pre_dec.hpp>
 #include <softdsp/post_inc.hpp>
 #include <softdsp/post_dec.hpp>
+#include <softdsp/shift_left.hpp>
+#include <softdsp/shift_right.hpp>
+#include <softdsp/modulus.hpp>
+#include <softdsp/equal_to.hpp>
+#include <softdsp/not_equal_to.hpp>
+#include <softdsp/less.hpp>
 #include <softdsp/at.hpp>
 #include <softdsp/static_cast.hpp>
 #include <softdsp/multiplies.hpp>
@@ -123,7 +129,13 @@ SOFTDSP_ENABLE_BINARY_OPERATOR_( plus )
 SOFTDSP_ENABLE_BINARY_OPERATOR_( minus )
 SOFTDSP_ENABLE_BINARY_OPERATOR_( multiplies )
 SOFTDSP_ENABLE_BINARY_OPERATOR_( divides )
+SOFTDSP_ENABLE_BINARY_OPERATOR_( modulus )
 SOFTDSP_ENABLE_BINARY_OPERATOR_( subscript )
+SOFTDSP_ENABLE_BINARY_OPERATOR_( shift_left )
+SOFTDSP_ENABLE_BINARY_OPERATOR_( shift_right )
+SOFTDSP_ENABLE_BINARY_OPERATOR_( equal_to )
+SOFTDSP_ENABLE_BINARY_OPERATOR_( not_equal_to )
+SOFTDSP_ENABLE_BINARY_OPERATOR_( less )
 
 #define SOFTDSP_CONTEXT_FUNCTION_PROTO_( z, index, unused ) \
   proto::_
