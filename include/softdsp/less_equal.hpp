@@ -1,5 +1,5 @@
-#ifndef SOFTDSP_LESS_HPP
-#define SOFTDSP_LESS_HPP
+#ifndef SOFTDSP_LESS_EQUAL_HPP
+#define SOFTDSP_LESS_EQUAL_HPP
 
 #include <softdsp/primitive.hpp>
 #include <softdsp/constant_generator.hpp>
@@ -72,9 +72,9 @@ namespace softdsp {
 
   namespace keywords {
     template< typename Context >
-    class less {
+    class less_equal {
     public:
-      less( const Context &context_ ) : tools( context_.get_toolbox() ) {}
+      less_equal( const Context &context_ ) : tools( context_.get_toolbox() ) {}
       template< typename LeftType, typename RightType >
       return_value< bool > operator()(
         LeftType left_, RightType right_,
@@ -93,7 +93,7 @@ namespace softdsp {
         const auto right = cast( tools->as_llvm_value( tools->load( right_ ) ) );
         return
           return_value< bool >(
-            tools->ir_builder.CreateFCmpULT( left.value, right.value )
+            tools->ir_builder.CreateFCmpULE( left.value, right.value )
           );
       }
       template< typename LeftType, typename RightType >
@@ -117,7 +117,7 @@ namespace softdsp {
         const auto right = cast( tools->as_llvm_value( tools->load( right_ ) ) );
         return
           return_value< bool >(
-            tools->ir_builder.CreateICmpSLT( left.value, right.value )
+            tools->ir_builder.CreateICmpSLE( left.value, right.value )
           );
       }
       template< typename LeftType, typename RightType >
@@ -144,7 +144,7 @@ namespace softdsp {
         const auto right = cast( tools->as_llvm_value( tools->load( right_ ) ) );
         return
           return_value< bool >(
-            tools->ir_builder.CreateICmpULT( left.value, right.value )
+            tools->ir_builder.CreateICmpULE( left.value, right.value )
           );
       }
       template< typename LeftType, typename RightType >

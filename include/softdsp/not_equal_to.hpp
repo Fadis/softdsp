@@ -17,6 +17,7 @@
 #include <softdsp/llvm_toolbox.hpp>
 #include <softdsp/return_value.hpp>
 #include <softdsp/context_definitions.hpp>
+#include <softdsp/usual_arithmetic_conversions.hpp>
 
 #include <llvm/ADT/ArrayRef.h>
 #include <llvm/LLVMContext.h>
@@ -87,10 +88,7 @@ namespace softdsp {
           >
         >::type* = 0
       ) {
-        typedef decltype(
-          std::declval< typename get_return_type< LeftType >::type >() +
-          std::declval< typename get_return_type< RightType >::type >()
-        ) result_type;
+        typedef typename usual_arithmetic_conversions< LeftType, RightType >::type result_type;
         typename static_cast_< result_type >::template eval< Context > cast( tools );
         const auto left = cast( tools->as_llvm_value( tools->load( left_ ) ) );
         const auto right = cast( tools->as_llvm_value( tools->load( right_ ) ) );
@@ -112,10 +110,7 @@ namespace softdsp {
           >
         >::type* = 0
       ) {
-        typedef decltype(
-          std::declval< typename get_return_type< LeftType >::type >() +
-          std::declval< typename get_return_type< RightType >::type >()
-        ) result_type;
+        typedef typename usual_arithmetic_conversions< LeftType, RightType >::type result_type;
         typename static_cast_< result_type >::template eval< Context > cast( tools );
         const auto left = cast( tools->as_llvm_value( tools->load( left_ ) ) );
         const auto right = cast( tools->as_llvm_value( tools->load( right_ ) ) );

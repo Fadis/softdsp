@@ -1,5 +1,5 @@
-#ifndef SOFTDSP_LESS_HPP
-#define SOFTDSP_LESS_HPP
+#ifndef SOFTDSP_GREATER_EQUAL_HPP
+#define SOFTDSP_GREATER_EQUAL_HPP
 
 #include <softdsp/primitive.hpp>
 #include <softdsp/constant_generator.hpp>
@@ -72,9 +72,9 @@ namespace softdsp {
 
   namespace keywords {
     template< typename Context >
-    class less {
+    class greater_equal {
     public:
-      less( const Context &context_ ) : tools( context_.get_toolbox() ) {}
+      greater_equal( const Context &context_ ) : tools( context_.get_toolbox() ) {}
       template< typename LeftType, typename RightType >
       return_value< bool > operator()(
         LeftType left_, RightType right_,
@@ -91,10 +91,9 @@ namespace softdsp {
         typename static_cast_< result_type >::template eval< Context > cast( tools );
         const auto left = cast( tools->as_llvm_value( tools->load( left_ ) ) );
         const auto right = cast( tools->as_llvm_value( tools->load( right_ ) ) );
-        return
-          return_value< bool >(
-            tools->ir_builder.CreateFCmpULT( left.value, right.value )
-          );
+        return return_value< bool >(
+          tools->ir_builder.CreateFCmpUGE( left.value, right.value )
+        );
       }
       template< typename LeftType, typename RightType >
       return_value< bool > operator()(
@@ -115,10 +114,9 @@ namespace softdsp {
         typename static_cast_< result_type >::template eval< Context > cast( tools );
         const auto left = cast( tools->as_llvm_value( tools->load( left_ ) ) );
         const auto right = cast( tools->as_llvm_value( tools->load( right_ ) ) );
-        return
-          return_value< bool >(
-            tools->ir_builder.CreateICmpSLT( left.value, right.value )
-          );
+        return return_value< bool >(
+          tools->ir_builder.CreateICmpSGE( left.value, right.value )
+        );
       }
       template< typename LeftType, typename RightType >
       return_value< bool > operator()(
@@ -142,10 +140,9 @@ namespace softdsp {
         typename static_cast_< result_type >::template eval< Context > cast( tools );
         const auto left = cast( tools->as_llvm_value( tools->load( left_ ) ) );
         const auto right = cast( tools->as_llvm_value( tools->load( right_ ) ) );
-        return
-          return_value< bool >(
-            tools->ir_builder.CreateICmpULT( left.value, right.value )
-          );
+        return return_value< bool >(
+          tools->ir_builder.CreateICmpUGE( left.value, right.value )
+        );
       }
       template< typename LeftType, typename RightType >
       auto operator()(

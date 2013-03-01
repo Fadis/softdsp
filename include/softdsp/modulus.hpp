@@ -17,6 +17,7 @@
 #include <softdsp/llvm_toolbox.hpp>
 #include <softdsp/return_value.hpp>
 #include <softdsp/context_definitions.hpp>
+#include <softdsp/usual_arithmetic_conversions.hpp>
 
 #include <llvm/ADT/ArrayRef.h>
 #include <llvm/LLVMContext.h>
@@ -77,116 +78,73 @@ namespace softdsp {
       modulus( const Context &context_ ) : tools( context_.get_toolbox() ) {}
       modulus( const typename Context::toolbox_type &tools_ ) : tools( tools_ ) {}
       template< typename LeftType, typename RightType >
-      struct result_type {
-        typedef
-          decltype(
-            std::declval< typename get_return_type< LeftType >::type >() /
-            std::declval< typename get_return_type< RightType >::type >()
-          ) type;
-      };
-      template< typename LeftType, typename RightType >
-      return_value< typename result_type< LeftType, RightType >::type >
+      return_value< typename usual_arithmetic_conversions< LeftType, RightType >::type >
       operator()(
         LeftType left_, RightType right_,
         typename boost::enable_if<
           boost::mpl::and_<
             at_least_one_operand_is_llvm_value< LeftType, RightType >,
             boost::is_integral<
-              typename get_return_type< LeftType >::type
+              typename usual_arithmetic_conversions< LeftType, RightType >::type
             >,
-            boost::is_integral<
-              typename get_return_type< RightType >::type
-            >,
-            boost::mpl::not_< boost::mpl::or_<
-              boost::is_signed<
-                typename get_return_type< LeftType >::type
-              >,
-              boost::is_signed<
-                typename get_return_type< RightType >::type
-              >
+            boost::mpl::not_< boost::is_signed<
+              typename usual_arithmetic_conversions< LeftType, RightType >::type
             > >
           >
         >::type* = 0
       ) {
-        typename static_cast_<
-          typename result_type< LeftType, RightType >::type
-        >::template eval< Context > cast( tools );
+        typedef typename usual_arithmetic_conversions< LeftType, RightType >::type result_type;
+        typename static_cast_< result_type >::template eval< Context > cast( tools );
         const auto left = cast( tools->as_llvm_value( tools->load( left_ ) ) );
         const auto right = cast( tools->as_llvm_value( tools->load( right_ ) ) );
-        return
-          return_value< typename result_type< LeftType, RightType >::type >(
-            tools->ir_builder.CreateURem( left.value, right.value )
-          );
+        return return_value< result_type >(
+          tools->ir_builder.CreateURem( left.value, right.value )
+        );
       }
       template< typename LeftType, typename RightType >
-      return_value< typename result_type< LeftType, RightType >::type >
+      return_value< typename usual_arithmetic_conversions< LeftType, RightType >::type >
       operator()(
         LeftType left_, RightType right_,
         typename boost::enable_if<
           boost::mpl::and_<
             at_least_one_operand_is_llvm_value< LeftType, RightType >,
             boost::is_integral<
-              typename get_return_type< LeftType >::type
+              typename usual_arithmetic_conversions< LeftType, RightType >::type
             >,
-            boost::is_integral<
-              typename get_return_type< RightType >::type
-            >,
-            boost::mpl::or_<
-              boost::is_signed<
-                typename get_return_type< LeftType >::type
-              >,
-              boost::is_signed<
-                typename get_return_type< RightType >::type
-              >
+            boost::is_signed<
+              typename usual_arithmetic_conversions< LeftType, RightType >::type
             >
           >
         >::type* = 0
       ) {
-        typename static_cast_<
-          typename result_type< LeftType, RightType >::type
-        >::template eval< Context > cast( tools );
+        typedef typename usual_arithmetic_conversions< LeftType, RightType >::type result_type;
+        typename static_cast_< result_type >::template eval< Context > cast( tools );
         const auto left = cast( tools->as_llvm_value( tools->load( left_ ) ) );
         const auto right = cast( tools->as_llvm_value( tools->load( right_ ) ) );
-        return
-          return_value< typename result_type< LeftType, RightType >::type >(
-            tools->ir_builder.CreateSRem( left.value, right.value )
-          );
+        return return_value< result_type >(
+          tools->ir_builder.CreateSRem( left.value, right.value )
+        );
       }
       template< typename LeftType, typename RightType >
-      return_value< typename result_type< LeftType, RightType >::type >
+      return_value< typename usual_arithmetic_conversions< LeftType, RightType >::type >
       operator()(
         LeftType left_, RightType right_,
         typename boost::enable_if<
           boost::mpl::and_<
             at_least_one_operand_is_llvm_value< LeftType, RightType >,
-            boost::mpl::or_<
-              boost::is_float<
-                typename get_return_type< LeftType >::type
-              >,
-              boost::is_float<
-                typename get_return_type< RightType >::type
-              >
-            >,
-            boost::mpl::and_<
-              is_primitive<
-                typename get_return_type< LeftType >::type
-              >,
-              is_primitive<
-                typename get_return_type< RightType >::type
-              >
+            boost::is_float<
+              typename usual_arithmetic_conversions< LeftType, RightType >::type
             >
           >
         >::type* = 0
       ) {
-        typename static_cast_<
-          typename result_type< LeftType, RightType >::type
-        >::template eval< Context > cast( tools );
+        typedef typename usual_arithmetic_conversions< LeftType, RightType >::type result_type;
+        typename static_cast_< result_type >::template eval< Context > cast( tools );
         const auto left = cast( tools->as_llvm_value( tools->load( left_ ) ) );
         const auto right = cast( tools->as_llvm_value( tools->load( right_ ) ) );
-        return
-          return_value< typename result_type< LeftType, RightType >::type >(
-            tools->ir_builder.CreateFRem( left.value, right.value )
-          );
+        return return_value< result_type >(
+          tools->ir_builder.CreateFRem( left.value, right.value )
+        );
       }
       template< typename LeftType, typename RightType >
       auto operator()(

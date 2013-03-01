@@ -35,6 +35,9 @@
 #include <softdsp/equal_to.hpp>
 #include <softdsp/not_equal_to.hpp>
 #include <softdsp/less.hpp>
+#include <softdsp/less_equal.hpp>
+#include <softdsp/greater.hpp>
+#include <softdsp/greater_equal.hpp>
 #include <softdsp/at.hpp>
 #include <softdsp/static_cast.hpp>
 #include <softdsp/multiplies.hpp>
@@ -136,6 +139,9 @@ SOFTDSP_ENABLE_BINARY_OPERATOR_( shift_right )
 SOFTDSP_ENABLE_BINARY_OPERATOR_( equal_to )
 SOFTDSP_ENABLE_BINARY_OPERATOR_( not_equal_to )
 SOFTDSP_ENABLE_BINARY_OPERATOR_( less )
+SOFTDSP_ENABLE_BINARY_OPERATOR_( less_equal )
+SOFTDSP_ENABLE_BINARY_OPERATOR_( greater )
+SOFTDSP_ENABLE_BINARY_OPERATOR_( greater_equal )
 
 #define SOFTDSP_CONTEXT_FUNCTION_PROTO_( z, index, unused ) \
   proto::_
@@ -191,3 +197,4 @@ BOOST_PP_REPEAT_FROM_TO( 1, FUSION_MAX_VECTOR_SIZE, SOFTDSP_CONTEXT_FUNCTION, )
 }
 
 #endif
+

@@ -17,6 +17,7 @@
 #include <softdsp/llvm_toolbox.hpp>
 #include <softdsp/return_value.hpp>
 #include <softdsp/context_definitions.hpp>
+#include <softdsp/usual_arithmetic_conversions.hpp>
 
 #include <llvm/ADT/ArrayRef.h>
 #include <llvm/LLVMContext.h>
@@ -75,27 +76,20 @@ namespace softdsp {
     public:
       minus( const Context &context_ ) : tools( context_.get_toolbox() ) {}
       template< typename LeftType, typename RightType >
-      auto operator()(
+      return_value<
+        typename usual_arithmetic_conversions< LeftType, RightType >::type
+      > operator()(
         LeftType left_, RightType right_,
         typename boost::enable_if<
           boost::mpl::and_<
             at_least_one_operand_is_llvm_value< LeftType, RightType >,
-            at_least_one_operand_is_float<
-              typename get_return_type< LeftType >::type,
-              typename get_return_type< RightType >::type
+            boost::is_float<
+              typename usual_arithmetic_conversions< LeftType, RightType >::type
             >
           >
         >::type* = 0
-      ) -> return_value<
-        decltype(
-          std::declval< typename get_return_type< LeftType >::type >() -
-          std::declval< typename get_return_type< RightType >::type >()
-        )
-      > {
-        typedef decltype(
-          std::declval< typename get_return_type< LeftType >::type >() -
-          std::declval< typename get_return_type< RightType >::type >()
-        ) result_type;
+      ) {
+        typedef typename usual_arithmetic_conversions< LeftType, RightType >::type result_type;
         typename static_cast_< result_type >::template eval< Context > cast( tools );
         const auto left = cast( tools->as_llvm_value( tools->load( left_ ) ) );
         const auto right = cast( tools->as_llvm_value( tools->load( right_ ) ) );
@@ -106,29 +100,20 @@ namespace softdsp {
           );
       }
       template< typename LeftType, typename RightType >
-      auto operator()(
+      return_value<
+        typename usual_arithmetic_conversions< LeftType, RightType >::type
+      > operator()(
         LeftType left_, RightType right_,
         typename boost::enable_if<
           boost::mpl::and_<
             at_least_one_operand_is_llvm_value< LeftType, RightType >,
-            boost::mpl::not_<
-              at_least_one_operand_is_float<
-                typename get_return_type< LeftType >::type,
-                typename get_return_type< RightType >::type
-              >
+            boost::is_integral<
+              typename usual_arithmetic_conversions< LeftType, RightType >::type
             >
           >
         >::type* = 0
-      ) -> return_value<
-        decltype(
-          std::declval< typename get_return_type< LeftType >::type >() -
-          std::declval< typename get_return_type< RightType >::type >()
-        )
-      > {
-        typedef decltype(
-          std::declval< typename get_return_type< LeftType >::type >() -
-          std::declval< typename get_return_type< RightType >::type >()
-        ) result_type;
+      ) {
+        typedef typename usual_arithmetic_conversions< LeftType, RightType >::type result_type;
         typename static_cast_< result_type >::template eval< Context > cast( tools );
         const auto left = cast( tools->as_llvm_value( tools->load( left_ ) ) );
         const auto right = cast( tools->as_llvm_value( tools->load( right_ ) ) );
@@ -138,13 +123,54 @@ namespace softdsp {
           );
       }
       template< typename LeftType, typename RightType >
+      return_value<
+        typename usual_arithmetic_conversions< LeftType, RightType >::type
+      > operator()(
+        LeftType left_, RightType right_,
+        typename boost::enable_if<
+          boost::mpl::and_<
+            at_least_one_operand_is_llvm_value< LeftType, RightType >,
+            boost::is_pointer<
+              typename boost::remove_reference<
+                typename get_return_type< LeftType >::type
+              >::type
+            >,
+            boost::is_integral<
+              typename boost::remove_reference<
+                typename get_return_type< RightType >::type
+              >::type
+            >
+          >
+        >::type* = 0
+      ) {
+        const auto left = tools->as_llvm_value( tools->load( left_ ) );
+        const auto right = tools->as_llvm_value( tools->load( right_ ) );
+        return return_value< LeftType >(
+          tools->ir_builder.CreateSub(
+            left.value,
+            mul(
+              right.value,
+              tools->data_layout->getTypeAlllocSize(
+                tools->type_generator( tag<
+                  typename boost::remove_pointer<
+                    typename boost::remove_reference<
+                      typename get_return_type< LeftType >::type
+                    >::type
+                  >::type
+                >() )
+              )
+            )
+          )
+        );
+      }
+      template< typename LeftType, typename RightType >
       auto operator()(
         LeftType left_, RightType right_,
         typename boost::disable_if<
           at_least_one_operand_is_llvm_value< LeftType, RightType >
         >::type* = 0
-      ) -> decltype( left_ + right_ ) {
-        return left_ + right_;
+      ) -> decltype( left_ - right_ ) {
+        return left_ - right_;
       }
     private:
       const typename Context::toolbox_type tools;
