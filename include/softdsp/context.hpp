@@ -38,6 +38,8 @@
 #include <softdsp/less_equal.hpp>
 #include <softdsp/greater.hpp>
 #include <softdsp/greater_equal.hpp>
+#include <softdsp/logical_or.hpp>
+#include <softdsp/logical_and.hpp>
 #include <softdsp/at.hpp>
 #include <softdsp/static_cast.hpp>
 #include <softdsp/multiplies.hpp>
@@ -142,6 +144,8 @@ SOFTDSP_ENABLE_BINARY_OPERATOR_( less )
 SOFTDSP_ENABLE_BINARY_OPERATOR_( less_equal )
 SOFTDSP_ENABLE_BINARY_OPERATOR_( greater )
 SOFTDSP_ENABLE_BINARY_OPERATOR_( greater_equal )
+SOFTDSP_ENABLE_BINARY_OPERATOR_( logical_or )
+SOFTDSP_ENABLE_BINARY_OPERATOR_( logical_and )
 
 #define SOFTDSP_CONTEXT_FUNCTION_PROTO_( z, index, unused ) \
   proto::_
