@@ -75,6 +75,7 @@ namespace softdsp {
     class complement {
     public:
       complement( const Context &context_ ) : tools( context_.get_toolbox() ) {}
+      complement( const typename Context::toolbox_type &tools_ ) : tools( tools_ ) {}
       template< typename ValueType >
       return_value<
         typename boost::remove_reference<

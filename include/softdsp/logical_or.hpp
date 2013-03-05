@@ -76,6 +76,7 @@ namespace softdsp {
     class logical_or {
     public:
       logical_or( const Context &context_ ) : tools( context_.get_toolbox() ) {}
+      logical_or( const typename Context::toolbox_type &tools_ ) : tools( tools_ ) {}
       template< typename LeftType, typename RightType >
       return_value< bool >
       operator()(

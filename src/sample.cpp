@@ -342,7 +342,10 @@ int main() {
     softdsp::module sd_module( context, "the_module", target_data->getStringRepresentation() );
     sd_module.add_function< int ( softdsp::data_layout::array< int, 2 >, softdsp::data_layout::tuple< int, double, int, int >, softdsp::data_layout::array< softdsp::data_layout::array< int, 2 >, 2 > ) >(
       "woo",
-      ( softdsp::static_cast_< int32_t >( softdsp::static_cast_< float >( softdsp::_1[ 0 ] ) * 3 + ++--softdsp::at_c< 2 >( softdsp::_2 ) / 3 ) + ( ~-softdsp::_3[ 1 ][ 1 ] << 1 ) ) % 6 < 10
+      (
+        softdsp::_1[ 0 ] <<= 20,
+        softdsp::_1[ 1 ] = ( softdsp::static_cast_< int32_t >( softdsp::static_cast_< float >( softdsp::_1[ 0 ] ) * 3 + ++--softdsp::at_c< 2 >( softdsp::_2 ) / 3 ) + ( ~softdsp::_3[ 1 ][ 1 ] << 1 ) ) % 6
+      )
     );
     sd_module.dump();
     value_generator vg( context, module->getDataLayout() );

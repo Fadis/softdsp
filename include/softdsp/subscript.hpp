@@ -78,6 +78,7 @@ namespace softdsp {
     class subscript {
     public:
       subscript( const Context &context_ ) : tools( context_.get_toolbox() ) {}
+      subscript( const typename Context::toolbox_type &tools_ ) : tools( tools_ ) {}
       template< typename LeftType, typename RightType >
       return_value<
         typename hermit::range_value<
@@ -96,66 +97,12 @@ namespace softdsp {
               typename boost::remove_reference<
                 typename get_return_type< LeftType >::type
               >::type
-            >,
-            is_primitive<
-              typename boost::remove_reference<
-                typename hermit::range_value<
-                  typename boost::remove_reference<
-                    typename get_return_type< LeftType >::type
-                  >::type
-                >::type
-              >::type
-            >
-          >
-        >::type* = 0
-      ) {
-        typename static_cast_< int >::template eval< Context > cast( tools );
-        const auto left = tools->as_llvm_value( tools->load( left_ ) );
-        const auto right = cast( tools->as_llvm_value( tools->load( right_ ) ) );
-        return return_value<
-          typename hermit::range_value<
-            typename boost::remove_reference<
-              typename get_return_type< LeftType >::type
-            >::type
-          >::type
-        >(
-          tools->ir_builder.CreateExtractElement( left.value, right.value )
-        );
-      }
-      template< typename LeftType, typename RightType >
-      return_value<
-        typename hermit::range_value<
-          typename boost::remove_reference<
-            typename get_return_type< LeftType >::type
-          >::type
-        >::type
-      >
-      operator()(
-        LeftType left_,
-        RightType right_,
-        typename boost::enable_if<
-          boost::mpl::and_<
-            at_least_one_operand_is_llvm_value< LeftType, RightType >,
-            hermit::is_forward_traversal_range<
-              typename boost::remove_reference<
-                typename get_return_type< LeftType >::type
-              >::type
-            >,
-            boost::mpl::not_<
-              is_primitive<
-                typename boost::remove_reference<
-                  typename hermit::range_value<
-                    typename boost::remove_reference<
-                      typename get_return_type< LeftType >::type
-                    >::type
-                  >::type
-                >::type
-              >
             >,
             boost::mpl::not_< boost::is_reference< typename get_return_type< LeftType >::type > >
           >
         >::type* = 0
       ) {
+        std::cout << "bbbbbb" << std::endl;
         const auto left = tools->as_llvm_value( tools->load( left_ ) );
         std::vector< int > args = { static_cast< int >( right_ ) };
         llvm::ArrayRef< int > args_ref( args );
@@ -188,21 +135,21 @@ namespace softdsp {
                 typename get_return_type< LeftType >::type
               >::type
             >,
-            boost::mpl::not_<
-              is_primitive<
-                typename boost::remove_reference<
-                  typename hermit::range_value<
-                    typename boost::remove_reference<
-                      typename get_return_type< LeftType >::type
-                    >::type
-                  >::type
-                >::type
-              >
-            >,
             boost::is_reference< typename get_return_type< LeftType >::type >
           >
         >::type* = 0
       ) {
+        std::cout << "aaaaa" << std::endl;
+        int status;
+        std::cout << abi::__cxa_demangle( typeid(
+      return_value<
+        typename hermit::range_value<
+          typename boost::remove_reference<
+            typename get_return_type< LeftType >::type
+          >::type
+        >::type&
+      >
+        ).name(), 0, 0, &status ) << std::endl;
         typename static_cast_< int >::template eval< Context > cast( tools );
         const auto right = cast( tools->as_llvm_value( tools->load( right_ ) ) );
         left_.value->getType()->dump();std::cout << std::endl;

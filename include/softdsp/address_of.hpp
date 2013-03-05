@@ -75,6 +75,7 @@ namespace softdsp {
     class address_of {
     public:
       address_of( const Context &context_ ) : tools( context_.get_toolbox() ) {}
+      address_of( const typename Context::toolbox_type &tools_ ) : tools( tools_ ) {}
       template< typename ValueType >
       return_value<
         typename boost::remove_reference<

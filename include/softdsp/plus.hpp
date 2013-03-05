@@ -75,6 +75,7 @@ namespace softdsp {
     class plus {
     public:
       plus( const Context &context_ ) : tools( context_.get_toolbox() ) {}
+      plus( const typename Context::toolbox_type &tools_ ) : tools( tools_ ) {}
       template< typename LeftType, typename RightType >
       return_value<
         typename usual_arithmetic_conversions< LeftType, RightType >::type

@@ -76,6 +76,7 @@ namespace softdsp {
     class logical_and {
     public:
       logical_and( const Context &context_ ) : tools( context_.get_toolbox() ) {}
+      logical_and( const typename Context::toolbox_type &tools_ ) : tools( tools_ ) {}
       template< typename LeftType, typename RightType >
       return_value< bool >
       operator()(

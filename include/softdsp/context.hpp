@@ -40,6 +40,21 @@
 #include <softdsp/greater_equal.hpp>
 #include <softdsp/logical_or.hpp>
 #include <softdsp/logical_and.hpp>
+#include <softdsp/bitwise_or.hpp>
+#include <softdsp/bitwise_and.hpp>
+#include <softdsp/bitwise_xor.hpp>
+#include <softdsp/comma.hpp>
+#include <softdsp/assign.hpp>
+#include <softdsp/shift_left_assign.hpp>
+#include <softdsp/shift_right_assign.hpp>
+#include <softdsp/multiplies_assign.hpp>
+#include <softdsp/divides_assign.hpp>
+#include <softdsp/modulus_assign.hpp>
+#include <softdsp/plus_assign.hpp>
+#include <softdsp/minus_assign.hpp>
+#include <softdsp/bitwise_and_assign.hpp>
+#include <softdsp/bitwise_or_assign.hpp>
+#include <softdsp/bitwise_xor_assign.hpp>
 #include <softdsp/at.hpp>
 #include <softdsp/static_cast.hpp>
 #include <softdsp/multiplies.hpp>
@@ -146,6 +161,21 @@ SOFTDSP_ENABLE_BINARY_OPERATOR_( greater )
 SOFTDSP_ENABLE_BINARY_OPERATOR_( greater_equal )
 SOFTDSP_ENABLE_BINARY_OPERATOR_( logical_or )
 SOFTDSP_ENABLE_BINARY_OPERATOR_( logical_and )
+SOFTDSP_ENABLE_BINARY_OPERATOR_( bitwise_or )
+SOFTDSP_ENABLE_BINARY_OPERATOR_( bitwise_and )
+SOFTDSP_ENABLE_BINARY_OPERATOR_( bitwise_xor )
+SOFTDSP_ENABLE_BINARY_OPERATOR_( comma )
+SOFTDSP_ENABLE_BINARY_OPERATOR_( assign )
+SOFTDSP_ENABLE_BINARY_OPERATOR_( shift_left_assign )
+SOFTDSP_ENABLE_BINARY_OPERATOR_( shift_right_assign )
+SOFTDSP_ENABLE_BINARY_OPERATOR_( multiplies_assign )
+SOFTDSP_ENABLE_BINARY_OPERATOR_( divides_assign )
+SOFTDSP_ENABLE_BINARY_OPERATOR_( modulus_assign )
+SOFTDSP_ENABLE_BINARY_OPERATOR_( plus_assign )
+SOFTDSP_ENABLE_BINARY_OPERATOR_( minus_assign )
+SOFTDSP_ENABLE_BINARY_OPERATOR_( bitwise_and_assign )
+SOFTDSP_ENABLE_BINARY_OPERATOR_( bitwise_or_assign )
+SOFTDSP_ENABLE_BINARY_OPERATOR_( bitwise_xor_assign )
 
 #define SOFTDSP_CONTEXT_FUNCTION_PROTO_( z, index, unused ) \
   proto::_

@@ -75,6 +75,7 @@ namespace softdsp {
     class post_inc {
     public:
       post_inc( const Context &context_ ) : tools( context_.get_toolbox() ) {}
+      post_inc( const typename Context::toolbox_type &tools_ ) : tools( tools_ ) {}
       template< typename ValueType >
       return_value<
         typename boost::remove_reference<

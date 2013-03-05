@@ -74,7 +74,8 @@ namespace softdsp {
     template< typename Context >
     class not_equal_to {
     public:
-    not_equal_to( const Context &context_ ) : tools( context_.get_toolbox() ) {}
+      not_equal_to( const Context &context_ ) : tools( context_.get_toolbox() ) {}
+      not_equal_to( const typename Context::toolbox_type &tools_ ) : tools( tools_ ) {}
       template< typename LeftType, typename RightType >
       return_value< bool > operator()(
         LeftType left_, RightType right_,

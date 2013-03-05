@@ -75,6 +75,7 @@ namespace softdsp {
     class pre_dec {
     public:
       pre_dec( const Context &context_ ) : tools( context_.get_toolbox() ) {}
+      pre_dec( const typename Context::toolbox_type &tools_ ) : tools( tools_ ) {}
       template< typename ValueType >
       ValueType
       operator()(

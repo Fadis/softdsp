@@ -75,6 +75,7 @@ namespace softdsp {
     class less_equal {
     public:
       less_equal( const Context &context_ ) : tools( context_.get_toolbox() ) {}
+      less_equal( const typename Context::toolbox_type &tools_ ) : tools( tools_ ) {}
       template< typename LeftType, typename RightType >
       return_value< bool > operator()(
         LeftType left_, RightType right_,

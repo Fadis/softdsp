@@ -76,6 +76,7 @@ namespace softdsp {
     class logical_not {
     public:
       logical_not( const Context &context_ ) : tools( context_.get_toolbox() ) {}
+      logical_not( const typename Context::toolbox_type &tools_ ) : tools( tools_ ) {}
       template< typename ValueType >
       return_value< bool >
       operator()(

@@ -75,6 +75,7 @@ namespace softdsp {
     class greater {
     public:
       greater( const Context &context_ ) : tools( context_.get_toolbox() ) {}
+      greater( const typename Context::toolbox_type &tools_ ) : tools( tools_ ) {}
       template< typename LeftType, typename RightType >
       return_value< bool > operator()(
         LeftType left_, RightType right_,

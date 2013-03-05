@@ -24,6 +24,10 @@ namespace softdsp {
     typedef T type;
   };
   template< typename T >
+  struct remove_proxy< data_layout::proxy< T >&, true > {
+    typedef T& type;
+  };
+  template< typename T >
   struct remove_proxy< T, false > {
     typedef T type;
   };

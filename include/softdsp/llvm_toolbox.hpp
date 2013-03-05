@@ -174,6 +174,7 @@ namespace softdsp {
         >
       >::type* = 0
     ) {
+      std::cout << "gggggggggg" << std::endl;
       return
         return_value<
           typename boost::remove_reference<

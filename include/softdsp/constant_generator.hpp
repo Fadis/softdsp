@@ -90,28 +90,7 @@ namespace softdsp {
       typename boost::enable_if<
         boost::mpl::and_<
           hermit::is_forward_traversal_range< Range >,
-          hermit::is_readable_range< Range >,
-          is_primitive< typename hermit::range_value< Range >::type >
-        >
-      >::type* = 0
-    ) const {
-      std::vector< llvm::Constant* > elements_as_constant;
-      boost::transform(
-        range,
-        std::back_inserter( elements_as_constant ),
-        *this
-      );
-      llvm::ArrayRef< llvm::Constant* > ref( elements_as_constant );
-      return llvm::ConstantVector::get( ref );
-    }
-    template< typename Range >
-    llvm::Constant *operator()(
-      const Range &range,
-      typename boost::enable_if<
-        boost::mpl::and_<
-          hermit::is_forward_traversal_range< Range >,
-          hermit::is_readable_range< Range >,
-          boost::mpl::not_< is_primitive< typename hermit::range_value< Range >::type > >
+          hermit::is_readable_range< Range >
         >
       >::type* = 0
     ) const {

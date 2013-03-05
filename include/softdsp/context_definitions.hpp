@@ -156,10 +156,9 @@ namespace softdsp {
         ) \
       ) result_type; \
       result_type operator()( Expr &expr, context_type &context ) { \
-        return context. name ( \
-            proto::eval( boost::proto::left( expr ), context ), \
-            proto::eval( boost::proto::right( expr ), context ) \
-          ); \
+        const auto left = proto::eval( boost::proto::left( expr ), context ); \
+        const auto right = proto::eval( boost::proto::right( expr ), context ); \
+        return context. name ( left, right ); \
       } \
     };
 

@@ -18,6 +18,7 @@
 #include <softdsp/return_value.hpp>
 #include <softdsp/context_definitions.hpp>
 #include <softdsp/return_value.hpp>
+#include <softdsp/usual_arithmetic_conversions.hpp>
 
 #include <llvm/ADT/ArrayRef.h>
 #include <llvm/LLVMContext.h>
@@ -75,6 +76,7 @@ namespace softdsp {
     class assign {
     public:
       assign( const Context &context_ ) : tools( context_.get_toolbox() ) {}
+      assign( const typename Context::toolbox_type &tools_ ) : tools( tools_ ) {}
       template< typename LeftType, typename RightType >
       LeftType
       operator()(
@@ -82,7 +84,7 @@ namespace softdsp {
         RightType right_,
         typename boost::enable_if<
           boost::mpl::and_<
-            at_least_one_operand_is_llvm_value< LeftType, RightType >,
+            at_least_one_operand_is_llvm_value< LeftType >,
             boost::is_reference<
               typename get_return_type< LeftType >::type
             >
@@ -90,9 +92,9 @@ namespace softdsp {
         >::type* = 0
       ) {
         typedef typename boost::remove_reference<
-            typename get_return_type< LeftType >::type
-          >::type raw_type;
-        typename static_cast_< raw_type >::template eval< Context > cast( tools );
+            typename usual_arithmetic_conversions< LeftType, LeftType >::type
+          >::type result_type;
+        typename static_cast_< result_type >::template eval< Context > cast( tools );
         const auto left = tools->as_llvm_value( left_ );
         const auto right = cast( tools->as_llvm_value( tools->load( right_ ) ) );
         tools->ir_builder.CreateStore(
@@ -103,14 +105,15 @@ namespace softdsp {
       }
       template< typename LeftType, typename RightType >
       auto operator()(
-        ValueType value_,
+        LeftType left_,
+        RightType right_,
         typename boost::enable_if<
           boost::mpl::not_<
-            at_least_one_operand_is_llvm_value< ValueType >
+            at_least_one_operand_is_llvm_value< LeftType, RightType >
           >
         >::type* = 0
-      ) -> decltype( ++value_ ) {
-        return ++value_;
+      ) -> decltype( left_ = right_ ) {
+        return left_ = right_;
       }
     private:
       const typename Context::toolbox_type tools;

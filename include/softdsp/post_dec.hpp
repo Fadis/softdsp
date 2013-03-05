@@ -75,6 +75,7 @@ namespace softdsp {
     class post_dec {
     public:
       post_dec( const Context &context_ ) : tools( context_.get_toolbox() ) {}
+      post_dec( const typename Context::toolbox_type &tools_ ) : tools( tools_ ) {}
       template< typename ValueType >
       return_value<
         typename boost::remove_reference<

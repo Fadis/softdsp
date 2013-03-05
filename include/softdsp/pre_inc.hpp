@@ -75,6 +75,7 @@ namespace softdsp {
     class pre_inc {
     public:
       pre_inc( const Context &context_ ) : tools( context_.get_toolbox() ) {}
+      pre_inc( const typename Context::toolbox_type &tools_ ) : tools( tools_ ) {}
       template< typename ValueType >
       ValueType
       operator()(

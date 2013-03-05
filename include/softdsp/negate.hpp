@@ -18,6 +18,7 @@
 #include <softdsp/return_value.hpp>
 #include <softdsp/context_definitions.hpp>
 #include <softdsp/return_value.hpp>
+#include <softdsp/usual_arithmetic_conversions.hpp>
 
 #include <llvm/ADT/ArrayRef.h>
 #include <llvm/LLVMContext.h>
@@ -75,11 +76,10 @@ namespace softdsp {
     class negate {
     public:
       negate( const Context &context_ ) : tools( context_.get_toolbox() ) {}
+      negate( const typename Context::toolbox_type &tools_ ) : tools( tools_ ) {}
       template< typename ValueType >
       return_value<
-        typename boost::remove_reference<
-          typename get_return_type< ValueType >::type
-        >::type
+        typename usual_arithmetic_conversions< ValueType, ValueType >::type
       >
       operator()(
         ValueType value_,
@@ -87,32 +87,27 @@ namespace softdsp {
           boost::mpl::and_<
             at_least_one_operand_is_llvm_value< ValueType >,
             boost::is_integral<
-              typename boost::remove_reference<
-                typename get_return_type< ValueType >::type
-              >::type
+              typename usual_arithmetic_conversions< ValueType, ValueType >::type
             >,
             boost::is_signed<
-              typename boost::remove_reference<
-                typename get_return_type< ValueType >::type
-              >::type
+              typename usual_arithmetic_conversions< ValueType, ValueType >::type
             >
           >
         >::type* = 0
       ) {
         const auto value = tools->as_llvm_value( tools->load( value_ ) );
+        int status;
+        value.value->getType()->dump();
+        std::cout << "debug2: " << abi::__cxa_demangle( typeid( ValueType ).name(), 0, 0, &status ) << std::endl;
         return return_value<
-          typename boost::remove_reference<
-            typename get_return_type< ValueType >::type
-          >::type
+          typename usual_arithmetic_conversions< ValueType, ValueType >::type
         >(
           tools->ir_builder.CreateNSWNeg( value.value )
         );
       }
       template< typename ValueType >
       return_value<
-        typename boost::remove_reference<
-          typename get_return_type< ValueType >::type
-        >::type
+        typename usual_arithmetic_conversions< ValueType, ValueType >::type
       >
       operator()(
         ValueType value_,
@@ -120,32 +115,27 @@ namespace softdsp {
           boost::mpl::and_<
             at_least_one_operand_is_llvm_value< ValueType >,
             boost::is_integral<
-              typename boost::remove_reference<
-                typename get_return_type< ValueType >::type
-              >::type
+              typename usual_arithmetic_conversions< ValueType, ValueType >::type
             >,
             boost::mpl::not_< boost::is_signed<
-              typename boost::remove_reference<
-                typename get_return_type< ValueType >::type
-              >::type
+              typename usual_arithmetic_conversions< ValueType, ValueType >::type
             > >
           >
         >::type* = 0
       ) {
         const auto value = tools->as_llvm_value( tools->load( value_ ) );
+        int status;
+        value.value->getType()->dump();
+        std::cout << "debug1: " << abi::__cxa_demangle( typeid( ValueType ).name(), 0, 0, &status ) << std::endl;
         return return_value<
-          typename boost::remove_reference<
-            typename get_return_type< ValueType >::type
-          >::type
+          typename usual_arithmetic_conversions< ValueType, ValueType >::type
         >(
           tools.ir_builder.CreateNUWNeg( value.value )
         );
       }
       template< typename ValueType >
       return_value<
-        typename boost::remove_reference<
-          typename get_return_type< ValueType >::type
-        >::type
+        typename usual_arithmetic_conversions< ValueType, ValueType >::type
       >
       operator()(
         ValueType value_,
@@ -153,18 +143,17 @@ namespace softdsp {
           boost::mpl::and_<
             at_least_one_operand_is_llvm_value< ValueType >,
             boost::is_float<
-              typename boost::remove_reference<
-                typename get_return_type< ValueType >::type
-              >::type
+              typename usual_arithmetic_conversions< ValueType, ValueType >::type
             >
           >
         >::type* = 0
       ) {
         const auto value = tools->as_llvm_value( tools->load( value_ ) );
+        int status;
+        value.value->getType()->dump();
+        std::cout << "debug3: " << abi::__cxa_demangle( typeid( ValueType ).name(), 0, 0, &status ) << std::endl;
         return return_value<
-          typename boost::remove_reference<
-            typename get_return_type< ValueType >::type
-          >::type
+          typename usual_arithmetic_conversions< ValueType, ValueType >::type
         >(
           tools.ir_builder->CreateFNeg( value.value )
         );

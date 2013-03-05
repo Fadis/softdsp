@@ -1,5 +1,5 @@
-#ifndef SOFTDSP_UNARY_PLUS_HPP
-#define SOFTDSP_UNARY_PLUS_HPP
+#ifndef SOFTDSP_BITWISE_XOR_HPP
+#define SOFTDSP_BITWISE_XOR_HPP
 
 #include <softdsp/primitive.hpp>
 #include <softdsp/constant_generator.hpp>
@@ -17,6 +17,8 @@
 #include <softdsp/llvm_toolbox.hpp>
 #include <softdsp/return_value.hpp>
 #include <softdsp/context_definitions.hpp>
+#include <softdsp/return_value.hpp>
+#include <softdsp/binalize.hpp>
 
 #include <llvm/ADT/ArrayRef.h>
 #include <llvm/LLVMContext.h>
@@ -57,6 +59,7 @@
 #include <boost/swap.hpp>
 #include <boost/proto/proto.hpp>
 #include <boost/container/flat_map.hpp>
+#include <boost/type_traits.hpp> 
 
 #include <hermit/range_traits.hpp>
 #include <softdsp/static_range_size.hpp>
@@ -70,44 +73,43 @@ namespace softdsp {
 
   namespace keywords {
     template< typename Context >
-    class unary_plus {
+    class bitwise_xor {
     public:
-      unary_plus( const Context &context_ ) : tools( context_.get_toolbox() ) {}
-      unary_plus( const typename Context::toolbox_type &tools_ ) : tools( tools_ ) {}
-      template< typename ValueType >
-      return_value<
-        typename boost::remove_reference<
-          typename get_return_type< ValueType >::type
-        >::type
-      >
+      bitwise_xor( const Context &context_ ) : tools( context_.get_toolbox() ) {}
+      bitwise_xor( const typename Context::toolbox_type &tools_ ) : tools( tools_ ) {}
+      template< typename LeftType, typename RightType >
+      return_value< typename usual_arithmetic_conversions< LeftType, RightType >::type >
       operator()(
-        ValueType value_,
+        LeftType left_,
+        RightType right_,
         typename boost::enable_if<
           boost::mpl::and_<
-            at_least_one_operand_is_llvm_value< ValueType >,
-            is_primitive< typename get_return_type< ValueType >::type >
+            at_least_one_operand_is_llvm_value< LeftType, RightType >,
+            boost::is_integral<
+              typename usual_arithmetic_conversions< LeftType, RightType >::type
+            >
           >
         >::type* = 0
       ) {
-        const auto value = tools->as_llvm_value( tools->load( value_ ) );
-        return return_value<
-          typename boost::remove_reference<
-            typename get_return_type< ValueType >::type
-          >::type
-        >(
-          value.value
+        typedef typename usual_arithmetic_conversions< LeftType, RightType >::type result_type;
+        typename static_cast_< result_type >::template eval< Context > cast( tools );
+        const auto left = cast( tools->as_llvm_value( tools->load( left_ ) ) );
+        const auto right = cast( tools->as_llvm_value( tools->load( right_ ) ) );
+        return return_value< result_type >(
+          tools->ir_builder.CreateXor( left.value, right.value )
         );
       }
-      template< typename ValueType >
+      template< typename LeftType, typename RightType >
       auto operator()(
-        ValueType value_,
+        LeftType left_,
+        RightType right_,
         typename boost::enable_if<
           boost::mpl::not_<
-            at_least_one_operand_is_llvm_value< ValueType >
+            at_least_one_operand_is_llvm_value< LeftType, RightType >
           >
         >::type* = 0
-      ) -> decltype( +value_ ) {
-        return +value_;
+      ) -> decltype( std::declval< LeftType >() ^ std::declval< RightType >() ) {
+        return left_ ^ right_;
       }
     private:
       const typename Context::toolbox_type tools;

@@ -112,31 +112,12 @@ namespace softdsp {
       return llvm::StructType::create( *context, ref );
     }
     template< typename Range >
-    llvm::VectorType *operator()(
-      tag< Range >,
-      typename boost::enable_if<
-        boost::mpl::and_<
-          hermit::is_forward_traversal_range< Range >,
-          softdsp::is_static_range< Range >,
-          is_primitive< typename remove_proxy< typename hermit::range_value< Range >::type >::type >
-        >
-      >::type* = 0
-    ) const {
-      return llvm::VectorType::get(
-        (*this)(
-          tag< typename boost::range_value< Range >::type >()
-        ),
-        softdsp::static_range_size< Range >::value
-      );
-    }
-    template< typename Range >
     llvm::ArrayType *operator()(
       tag< Range >,
       typename boost::enable_if<
         boost::mpl::and_<
           hermit::is_forward_traversal_range< Range >,
-          softdsp::is_static_range< Range >,
-          boost::mpl::not_< is_primitive< typename remove_proxy< typename hermit::range_value< Range >::type >::type > >
+          softdsp::is_static_range< Range >
         >
       >::type* = 0
     ) const {

@@ -73,6 +73,7 @@ namespace softdsp {
     class dereference {
     public:
       dereference( const Context &context_ ) : tools( context_.get_toolbox() ) {}
+      dereference( const typename Context::toolbox_type &tools_ ) : tools( tools_ ) {}
       template< typename ValueType >
       return_value<
         typename hermit::range_value<
@@ -85,65 +86,6 @@ namespace softdsp {
           boost::mpl::and_<
             at_least_one_operand_is_llvm_value< ValueType >,
             hermit::is_forward_traversal_range< typename boost::remove_reference< typename get_return_type< ValueType >::type >::type >,
-            is_primitive< typename boost::remove_reference< typename get_return_type< ValueType >::type >::type >,
-            boost::mpl::not_< boost::is_reference< typename get_return_type< ValueType >::type > >
-          >
-        >::type* = 0
-      ) {
-        const auto value = tools->as_llvm_value( tools->load( value_ ) );
-        return return_value<
-          typename hermit::range_value<
-            typename ValueType::type
-          >::type
-        >(
-          tools->ir_builder.CreateExtractElement(
-            value.value,
-            tools->as_llvm_value( 0u )
-          )
-        );
-      }
-      template< typename ValueType >
-      return_value<
-        typename hermit::range_value<
-           typename boost::remove_reference< typename get_return_type< ValueType >::type >::type
-        >::type&
-      >
-      operator()(
-        ValueType value_,
-        typename boost::enable_if<
-          boost::mpl::and_<
-            at_least_one_operand_is_llvm_value< ValueType >,
-            hermit::is_forward_traversal_range< typename boost::remove_reference< typename get_return_type< ValueType >::type >::type >,
-            is_primitive< typename boost::remove_reference< typename get_return_type< ValueType >::type >::type >,
-            boost::is_reference< typename get_return_type< ValueType >::type >
-          >
-        >::type* = 0
-      ) {
-        const auto value = tools->as_llvm_value( tools->load( value_ ) );
-        return return_value<
-          typename hermit::range_value<
-            typename ValueType::type
-          >::type&
-        >(
-          tools->ir_builder.CreateGEP(
-            value.value,
-            tools->as_llvm_value( 0u )
-          )
-        );
-      }
-      template< typename ValueType >
-      return_value<
-        typename hermit::range_value<
-           typename boost::remove_reference< typename get_return_type< ValueType >::type >::type
-        >::type
-      >
-      operator()(
-        ValueType value_,
-        typename boost::enable_if<
-          boost::mpl::and_<
-            at_least_one_operand_is_llvm_value< ValueType >,
-            hermit::is_forward_traversal_range< typename boost::remove_reference< typename get_return_type< ValueType >::type >::type >,
-            boost::mpl::not_< is_primitive< typename boost::remove_reference< typename get_return_type< ValueType >::type >::type > >,
             boost::mpl::not_< boost::is_reference< typename get_return_type< ValueType >::type > >
           >
         >::type* = 0
