@@ -15,6 +15,7 @@
 #include <softdsp/llvm_toolbox.hpp>
 #include <softdsp/context.hpp>
 #include <softdsp/static_cast.hpp>
+#include <softdsp/value_generator.hpp>
 
 #include <llvm/ADT/ArrayRef.h>
 #include <llvm/LLVMContext.h>
@@ -183,29 +184,6 @@ namespace softdsp {
     const std::shared_ptr< llvm::Module > llvm_module;
   };
 
-  class value_generator {
-  public:
-    value_generator(
-      const std::shared_ptr< llvm::LLVMContext > &context_,
-      const std::string &layout_
-    ) : context( context_ ), layout( layout_ ) {}
-    template< typename T >
-    T operator()( tag< T > ) {
-      const std::shared_ptr< data_layout::common > common_resources_(
-        new data_layout::common( context, layout, tag< T >() )
-      );
-      return T(
-        common_resources_,
-        boost::iterator_range< uint8_t* >(
-          common_resources_->data.data(),
-          common_resources_->data.data() + common_resources_->data.size() 
-        )
-      );
-    }
-  private:
-    const std::shared_ptr< llvm::LLVMContext > context;
-    const std::string layout;
-  };
 }
 int main() {
   using namespace softdsp;

@@ -111,6 +111,7 @@ namespace softdsp {
   using proto::argsns_::list2;
   using proto::exprns_::expr;
 
+
   template< typename function_type_ >
   class softdsp_context {
   public:
